@@ -75,8 +75,6 @@ class Organism:
             self.genome = [0, 1]
         self.territory = max(0, min(4, int(self.territory)))
         self.program = decode_program(self.genome)
-        # Amenability is also encoded loosely in genome length / composition
-        # so it can evolve rather than stay a free parameter.
         if len(self.genome) >= 4:
             self.amenability = 0.05 + 0.25 * (self.genome[-1] / 3.0)
 
@@ -89,7 +87,6 @@ class Organism:
         return action
 
     def metabolic_cost(self) -> int:
-        # Longer genomes and larger territories cost more to maintain.
         return 1 + (len(self.genome) // 16) + (self.territory // 4)
 
     def reproduction_threshold(self) -> int:
@@ -102,6 +99,18 @@ class Organism:
     def genotype_signature(self) -> tuple:
         return tuple(self.genome[:16])
 
+    @property
+    def preferred_state(self) -> int:
+        """Abiotic specialist bit. Encoded in the first genomic symbol."""
+        return self.genome[0] % 2
+
+    def unused_program_fraction(self) -> float:
+        """Share of decoded phenome symbols that a cyclic program never needs."""
+        if not self.program:
+            return 1.0
+        unique = len(set(self.program))
+        return max(0.0, 1.0 - unique / len(self.program))
+
 
 def random_genome(rng: np.random.Generator, length: int = 12) -> List[int]:
     length = max(2, length if length % 2 == 0 else length + 1)
@@ -113,22 +122,16 @@ def mutate(
     rng: np.random.Generator,
     amenability: float,
 ) -> List[int]:
-    """Point mutations plus occasional insertions/deletions of codon pairs.
-
-    Amenability raises the chance that a mutation is a *small* change
-    (Conrad's 'modifier sections' / amenability-to-evolution).
-    """
+    """Point mutations plus occasional insertions/deletions of codon pairs."""
     g = list(genome)
     p_point = 0.08 + 0.25 * amenability
     for i in range(len(g)):
         if rng.random() < p_point:
             if rng.random() < amenability:
-                # Small step: ±1 on the alphabet, wrapping.
                 g[i] = (g[i] + rng.choice([-1, 1])) % 4
             else:
                 g[i] = int(rng.integers(0, 4))
 
-    # Size mutations (codon pair insert/delete)
     if rng.random() < 0.05 + 0.1 * amenability:
         if rng.random() < 0.5 and len(g) >= 4:
             cut = rng.integers(0, len(g) - 1)
