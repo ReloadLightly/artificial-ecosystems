@@ -20,18 +20,20 @@ That move is the ancestor of Tierra, Avida, and a lot of artificial life. It is 
 ```
 src/evolve1970/       1970 world + amenability + modifier codon
 src/evolve4/          IV: two metabolites, producers/recyclers, construction
-src/evolve_modern/    same 1970 physics; controllers may be language policies
+src/evolve_modern/    language policies as a mutator (1970 primitives and IV)
 docs/evolve-family.md
 docs/original-model.md
 docs/quiet-vs-noisy.md
 docs/unused-sequences.md
 docs/amenability.md
 docs/evolve4.md
+docs/language-iv.md
 experiments/run_classic.py
 experiments/run_quiet_noisy.py
 experiments/run_unused.py
 experiments/run_amenability.py
 experiments/run_niches.py
+experiments/run_language_iv.py
 ```
 
 The reconstruction is documented, including the assumptions we had to make because the 1970 source code is lost and the paper is paywalled. See [`docs/original-model.md`](docs/original-model.md).
@@ -48,6 +50,8 @@ PYTHONPATH=src python3 experiments/run_unused.py
 PYTHONPATH=src python3 experiments/run_amenability.py
 PYTHONPATH=src python3 -m evolve4
 PYTHONPATH=src python3 experiments/run_niches.py
+PYTHONPATH=src python3 -m evolve_modern.iv
+PYTHONPATH=src python3 experiments/run_language_iv.py
 ```
 
 You should see population size, lineage count, and a running conservation check:
@@ -162,20 +166,20 @@ Write-up: [`docs/evolve4.md`](docs/evolve4.md).
 **Sideways, 1991–92.** Ray’s Tierra substitutes CPU time for chips.
 Same stance, different conserved resource.
 
-**2026.** `evolve_modern` keeps the chip physics and lets a language
-model act only as a mutator. Not a judge.
+**2026.** `evolve_modern` keeps the chip physics — and now the IV
+metabolite physics — and lets a language model act only as a
+mutator. Not a judge.
 
 ## The 2026 extension
 
-`evolve_modern` keeps the chip world untouched. What changes is the **variation operator**:
+`evolve_modern` does not touch conservation. What changes is the **variation operator**. There are two overlays:
 
-- a lineage can carry a short natural-language policy
-- a tiny deterministic interpreter compiles that policy + a local percept into one of the six 1970 primitives
-- an LLM, when present, is asked only at birth to rewrite the child’s policy
+- **1970 physics** (`python -m evolve_modern`). A policy compiles onto the six primitives. `heuristic_mutate_policy` rewrites the child’s text at birth.
+- **IV physics** (`python -m evolve_modern.iv`). A policy compiles onto conversion, taste, construct, and an `Intent` (stand here, dig or don’t, fission threshold). `heuristic_mutate_iv_policy` is the offline mutator. Wrap any `prompt → text` callable with `make_llm_mutator` to use a real model.
 
 The model is a mutator, not a judge. That is the whole point.
 
-Plug in your own mutator by replacing `heuristic_mutate_policy` in `src/evolve_modern/agents.py` with a call to whatever API you like. Keep the interpreter deterministic so two labs can reproduce each other’s runs.
+First rerun of the IV overlay, four seeds, sparse ring: both types persist, chips stay conserved, niche holds (0.86 → 0.89), and construct-match rises (0.36 → 0.57) because “prefer alkali / raise the ground” is usually one sentence. Write-up: [`docs/language-iv.md`](docs/language-iv.md).
 
 ## Status
 
