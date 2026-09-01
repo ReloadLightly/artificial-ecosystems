@@ -10,7 +10,8 @@ No fitness function is supplied. Selection is the bookkeeping of chips.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from collections import Counter
+from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 import numpy as np
@@ -32,6 +33,8 @@ class SimulationConfig:
     cooperate_gift: int = 3
     collect_amount: int = 4
     verbose_every: int = 50
+    abiotic_flip_prob: float = 0.0
+    match_bonus: bool = True
 
 
 @dataclass
@@ -49,6 +52,13 @@ class StepStats:
     cooperations: int
     action_hist: Dict[str, int]
     n_lineages: int
+    match_ratio: float
+    match_weighted: float
+    collect_attempts: int
+    collect_hits: int
+    shannon_diversity: float
+    unused_frac: float
+    abiotic_flips: int
 
 
 class Simulation:
@@ -117,6 +127,10 @@ class Simulation:
         births = 0
         deaths = 0
         cooperations = 0
+        match_hits = 0
+        match_obs = 0
+        collect_attempts = 0
+        collect_hits = 0
         action_hist = {
             "collect": 0,
             "forage": 0,
@@ -126,6 +140,18 @@ class Simulation:
             "wait": 0,
         }
         newborns: List[Organism] = []
+
+        def harvest(org: Organism, place_idx: int) -> int:
+            nonlocal collect_attempts, collect_hits
+            collect_attempts += 1
+            base = cfg.collect_amount
+            matched = self.world.places[place_idx].state == org.preferred_state
+            if cfg.match_bonus and matched:
+                base += 2
+            got = self.world.take_chips(place_idx, base)
+            if got > 0:
+                collect_hits += 1
+            return got
 
         order = self.rng.permutation(len(living))
         for idx in order:
@@ -148,18 +174,27 @@ class Simulation:
             name = ("collect", "forage", "cooperate", "repair", "reproduce", "wait")[action]
             action_hist[name] += 1
 
-            if action == 0:  # collect here
-                got = self.world.take_chips(org.position, cfg.collect_amount)
+            here_state = self.world.places[org.position].state
+            match_obs += 1
+            if org.preferred_state == here_state:
+                match_hits += 1
+
+            if action == 0:
+                got = harvest(org, org.position)
                 org.stored_chips += got
                 org.chips_collected += got
-            elif action == 1:  # forage in territory
+            elif action == 1:
                 spots = self.world.neighbor_indices(org.position, org.territory)
-                richest = max(spots, key=lambda i: self.world.places[i].chips)
-                got = self.world.take_chips(richest, cfg.collect_amount)
+                richest = max(
+                    spots,
+                    key=lambda i: self.world.places[i].chips
+                    + (4 if self.world.places[i].state == org.preferred_state else 0),
+                )
+                got = harvest(org, richest)
                 org.stored_chips += got
                 org.chips_collected += got
                 org.position = richest
-            elif action == 2:  # cooperate
+            elif action == 2:
                 neighbors = [
                     n
                     for i in self.world.neighbor_indices(org.position, org.territory)
@@ -173,12 +208,12 @@ class Simulation:
                     partner.stored_chips += gift
                     org.chips_donated += gift
                     cooperations += 1
-            elif action == 3:  # repair
+            elif action == 3:
                 if org.stored_chips >= 2:
                     org.stored_chips -= 2
                     self.world.decay_to_pool(2)
                     org.age = max(0, org.age - 4)
-            elif action == 4:  # reproduce
+            elif action == 4:
                 if (
                     org.stored_chips >= org.reproduction_threshold()
                     and len(living) + len(newborns) < cfg.max_organisms
@@ -226,9 +261,29 @@ class Simulation:
             self.organisms = [o for o in self.organisms if o.alive]
 
         self.world.rain_from_pool(self.rng, cfg.pool_rain_fraction)
+        abiotic_flips = self.world.perturb_abiotic(self.rng, cfg.abiotic_flip_prob)
 
         alive = [o for o in self.organisms if o.alive]
         sigs = {o.genotype_signature() for o in alive}
+        if alive:
+            counts = np.array(list(Counter(o.genotype_signature() for o in alive).values()), dtype=float)
+            probs = counts / counts.sum()
+            shannon = float(-(probs * np.log2(np.clip(probs, 1e-12, 1.0))).sum())
+            unused = float(np.mean([o.unused_program_fraction() for o in alive]))
+            stored = float(sum(o.stored_chips for o in alive))
+            if stored > 0:
+                matched_store = sum(
+                    o.stored_chips
+                    for o in alive
+                    if self.world.places[o.position].state == o.preferred_state
+                )
+                match_weighted = matched_store / stored
+            else:
+                match_weighted = 0.0
+        else:
+            shannon = 0.0
+            unused = 0.0
+            match_weighted = 0.0
         stats = StepStats(
             step=len(self.history),
             n_alive=len(alive),
@@ -243,6 +298,13 @@ class Simulation:
             cooperations=cooperations,
             action_hist=action_hist,
             n_lineages=len(sigs),
+            match_ratio=(match_hits / match_obs) if match_obs else 0.0,
+            match_weighted=match_weighted,
+            collect_attempts=collect_attempts,
+            collect_hits=collect_hits,
+            shannon_diversity=shannon,
+            unused_frac=unused,
+            abiotic_flips=abiotic_flips,
         )
         self.history.append(stats)
         return stats
@@ -254,9 +316,11 @@ class Simulation:
                 print(
                     f"t={stats.step:4d}  N={stats.n_alive:4d}  "
                     f"lineages={stats.n_lineages:3d}  "
+                    f"H={stats.shannon_diversity:.2f}  "
+                    f"match={stats.match_ratio:.2f}  "
                     f"chips[place/body/pool]="
                     f"{stats.chips_places}/{stats.chips_bodies}/{stats.chips_pool}  "
                     f"conserved={stats.chips_places + stats.chips_bodies + stats.chips_pool}  "
-                    f"coop={stats.cooperations}  born={stats.births}  died={stats.deaths}"
+                    f"flips={stats.abiotic_flips}"
                 )
         return self.history
