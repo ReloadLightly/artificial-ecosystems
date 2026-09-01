@@ -33,6 +33,8 @@ class World:
     def __post_init__(self) -> None:
         rng = np.random.default_rng(self.seed)
         if not self.places:
+            # Seed abiotic pattern: patches of A and B rather than pure noise,
+            # so matching the environment is a real problem.
             patch = 4
             self.places = [
                 Place(state=int((i // patch) % 2), chips=0) for i in range(self.n_places)
@@ -45,6 +47,7 @@ class World:
             p.chips = base + (1 if i < extra else 0)
 
     def neighbor_indices(self, index: int, radius: int) -> List[int]:
+        """Contiguous territory around `index` on the circular world."""
         if radius < 0:
             raise ValueError("radius must be >= 0")
         return [
@@ -62,6 +65,7 @@ class World:
         }
 
     def take_chips(self, index: int, amount: int) -> int:
+        """Remove up to `amount` chips from a place. Returns chips taken."""
         taken = min(amount, self.places[index].chips)
         self.places[index].chips -= taken
         return taken
@@ -73,6 +77,7 @@ class World:
         self.matter_pool += amount
 
     def rain_from_pool(self, rng: np.random.Generator, fraction: float = 0.15) -> int:
+        """Return a fraction of the matter pool onto random places (nutrient rain)."""
         raining = int(self.matter_pool * fraction)
         if raining <= 0:
             return 0
@@ -87,3 +92,14 @@ class World:
 
     def abiotic_vector(self) -> List[int]:
         return [p.state for p in self.places]
+
+    def perturb_abiotic(self, rng: np.random.Generator, flip_prob: float) -> int:
+        """Flip place states independently. flip_prob=0 is a quiet world."""
+        if flip_prob <= 0:
+            return 0
+        flipped = 0
+        for place in self.places:
+            if rng.random() < flip_prob:
+                place.state = 1 - place.state
+                flipped += 1
+        return flipped
