@@ -2,16 +2,10 @@
 
 Reconstruction notes (Conrad & Pattee 1970; Conrad 1981; Rizki & Conrad 1985):
 
-* The genome is a string of symbols. Sixteen possible genomic pairs map onto
-  six phenome symbols. We use a compact analog: each codon is two symbols
-  drawn from {0,1,2,3} (16 combinations) mapped to one of six actions.
-* Immediate behaviour depends on an internal state and an input state
-  (local abiotic pattern + presence of neighbours).
-* Chips are stored internally and spent on self-repair and reproduction.
-* Reproduction uses point mutation, length mutation, and optional
-  recombination (break-and-splice of two parental genomes).
-* No explicit fitness function is imposed. Persistence and reproduction
-  emerge from chip accounting.
+* Sixteen genomic pairs map onto six phenome symbols.
+* Last codon pair is a modifier section (EVOLVE III) and is not executed.
+* Amenability is read from that modifier pair.
+* No explicit fitness function. Persistence emerges from chip accounting.
 """
 
 from __future__ import annotations
@@ -22,31 +16,29 @@ from typing import List, Sequence
 import numpy as np
 
 
-GENOME_ALPHABET = (0, 1, 2, 3)  # 4 symbols → 16 possible pairs
+GENOME_ALPHABET = (0, 1, 2, 3)
 N_PHENOME = 6
-
-# Phenome / action vocabulary (the "fixed set of routines")
-# 0 collect   – take chips from the current place
-# 1 forage    – take chips from a random place in territory
-# 2 cooperate – donate chips to a neighbouring organism
-# 3 repair    – spend chips to reset wear / age pressure
-# 4 reproduce – attempt fission if enough chips stored
-# 5 wait      – hold position, small metabolic cost only
 ACTION_NAMES = ("collect", "forage", "cooperate", "repair", "reproduce", "wait")
 
 
 def pair_to_action(a: int, b: int) -> int:
-    """Map a genomic pair onto one of six phenome symbols."""
     return (a * 4 + b) % N_PHENOME
 
 
 def decode_program(genome: Sequence[int]) -> List[int]:
-    """Decode genome into a cyclic behavioural program."""
-    if len(genome) < 2:
-        return [5]  # wait
+    """Decode genome into a cyclic behavioural program.
+
+    If the genome is long enough, the last codon pair is a modifier
+    section (EVOLVE III) and is not executed.
+    """
+    g = list(genome)
+    if len(g) >= 4:
+        g = g[:-2]
+    if len(g) < 2:
+        return [5]
     program = []
-    for i in range(0, len(genome) - 1, 2):
-        program.append(pair_to_action(int(genome[i]), int(genome[i + 1])))
+    for i in range(0, len(g) - 1, 2):
+        program.append(pair_to_action(int(g[i]), int(g[i + 1])))
     return program or [5]
 
 
@@ -62,11 +54,11 @@ class Organism:
     territory: int = 1
     parent_id: int | None = None
     organism_id: int = 0
-    amenability: float = 0.15  # Conrad: evolvability itself is a trait
+    amenability: float = 0.15
     program_index: int = 0
     chips_collected: int = 0
     chips_donated: int = 0
-
+    executed: set = field(default_factory=set, repr=False)
     program: List[int] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -76,12 +68,14 @@ class Organism:
         self.territory = max(0, min(4, int(self.territory)))
         self.program = decode_program(self.genome)
         if len(self.genome) >= 4:
-            self.amenability = 0.05 + 0.25 * (self.genome[-1] / 3.0)
+            rate = self.genome[-2] / 3.0
+            step = self.genome[-1] / 3.0
+            self.amenability = 0.05 + 0.15 * rate + 0.15 * step
 
     def next_action(self, input_state: int) -> int:
-        """Behaviour depends on internal state + input state (1970)."""
         idx = (self.program_index + self.internal_state + input_state) % len(self.program)
         action = self.program[idx]
+        self.executed.add(action)
         self.program_index = (self.program_index + 1) % len(self.program)
         self.internal_state = (self.internal_state + input_state + action) % 8
         return action
@@ -93,7 +87,6 @@ class Organism:
         return 8 + len(self.genome) // 2
 
     def wear(self) -> float:
-        """Probability of death this step before repair. Rises with age."""
         return min(0.12, 0.002 + 0.0015 * self.age)
 
     def genotype_signature(self) -> tuple:
@@ -101,15 +94,21 @@ class Organism:
 
     @property
     def preferred_state(self) -> int:
-        """Abiotic specialist bit. Encoded in the first genomic symbol."""
         return self.genome[0] % 2
 
     def unused_program_fraction(self) -> float:
-        """Share of decoded phenome symbols that a cyclic program never needs."""
         if not self.program:
             return 1.0
-        unique = len(set(self.program))
-        return max(0.0, 1.0 - unique / len(self.program))
+        return max(0.0, 1.0 - len(set(self.program)) / len(self.program))
+
+    def dynamic_unused_fraction(self) -> float:
+        encoded = set(self.program)
+        if not encoded:
+            return 1.0
+        return max(0.0, 1.0 - len(self.executed & encoded) / len(encoded))
+
+    def program_names(self) -> List[str]:
+        return [ACTION_NAMES[a] for a in self.program]
 
 
 def random_genome(rng: np.random.Generator, length: int = 12) -> List[int]:
@@ -117,12 +116,7 @@ def random_genome(rng: np.random.Generator, length: int = 12) -> List[int]:
     return rng.integers(0, 4, size=length).tolist()
 
 
-def mutate(
-    genome: Sequence[int],
-    rng: np.random.Generator,
-    amenability: float,
-) -> List[int]:
-    """Point mutations plus occasional insertions/deletions of codon pairs."""
+def mutate(genome: Sequence[int], rng: np.random.Generator, amenability: float) -> List[int]:
     g = list(genome)
     p_point = 0.08 + 0.25 * amenability
     for i in range(len(g)):
@@ -131,7 +125,6 @@ def mutate(
                 g[i] = (g[i] + rng.choice([-1, 1])) % 4
             else:
                 g[i] = int(rng.integers(0, 4))
-
     if rng.random() < 0.05 + 0.1 * amenability:
         if rng.random() < 0.5 and len(g) >= 4:
             cut = rng.integers(0, len(g) - 1)
@@ -151,16 +144,11 @@ def mutate(
     return g
 
 
-def recombine(
-    a: Sequence[int],
-    b: Sequence[int],
-    rng: np.random.Generator,
-) -> List[int]:
-    """Break-and-splice at a random codon boundary (1970 recombination)."""
+def recombine(a: Sequence[int], b: Sequence[int], rng: np.random.Generator) -> List[int]:
     if len(a) < 2 or len(b) < 2:
         return list(a)
-    ca = (len(a) // 2)
-    cb = (len(b) // 2)
+    ca = len(a) // 2
+    cb = len(b) // 2
     cut_a = int(rng.integers(1, max(2, ca))) * 2
     cut_b = int(rng.integers(1, max(2, cb))) * 2
     child = list(a[:cut_a]) + list(b[cut_b:])
