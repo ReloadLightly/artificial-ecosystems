@@ -21,7 +21,9 @@ That move is the ancestor of Tierra, Avida, and a lot of artificial life. It is 
 src/evolve1970/       faithful reconstruction of the 1970 physics + genetics
 src/evolve_modern/    same physics; controllers may be language policies
 docs/original-model.md
+docs/quiet-vs-noisy.md
 experiments/run_classic.py
+experiments/run_quiet_noisy.py
 ```
 
 The reconstruction is documented, including the assumptions we had to make because the 1970 source code is lost and the paper is paywalled. See [`docs/original-model.md`](docs/original-model.md).
@@ -33,6 +35,7 @@ python3 -m pip install -r requirements.txt
 PYTHONPATH=src python3 -m evolve1970
 PYTHONPATH=src python3 -m evolve_modern
 PYTHONPATH=src python3 experiments/run_classic.py
+PYTHONPATH=src python3 experiments/run_quiet_noisy.py
 ```
 
 You should see population size, lineage count, and a running conservation check:
@@ -56,6 +59,16 @@ A circular one-dimensional world of *places*. Each place has an abiotic state (A
 5. Successful genomes carry sequences that are never executed.
 
 `experiments/run_classic.py` is the start of that checklist.
+`experiments/run_quiet_noisy.py` is observations (1) and (2): a still
+A/B world versus one where places flicker. First rerun, four seeds,
+280 steps:
+
+- matching rose in both worlds and rose *more* when the world was quiet
+  (0.56 → 0.84 quiet, 0.55 → 0.72 noisy)
+- the noisy world kept more lineages and higher Shannon diversity
+- chips stayed conserved
+
+Write-up: [`docs/quiet-vs-noisy.md`](docs/quiet-vs-noisy.md).
 
 ## The 2026 extension
 
