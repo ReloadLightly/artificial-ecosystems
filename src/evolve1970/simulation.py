@@ -1,9 +1,8 @@
-"""Two-phase discrete-event loop matching Conrad & Pattee (1970).
+"""Randomized sequential conserved-chip simulation.
 
-Phase 1 – interaction: each living organism reads local abiotic state and
-          neighbours, then executes the next genetically gated routine.
-Phase 2 – accounting: chips move, reproduction is resolved, the dead decay
-          into the matter pool, a fraction of the pool rains back onto places.
+This scheduler is a reconstruction choice: organisms immediately change shared
+state in randomized order. It is not the historical mark-then-resolve procedure,
+which remains a separate reconstruction milestone.
 
 No fitness function is supplied. Selection is the bookkeeping of chips.
 """
@@ -35,6 +34,7 @@ class SimulationConfig:
     verbose_every: int = 50
     abiotic_flip_prob: float = 0.0
     match_bonus: bool = True
+    modifier_enabled: bool = False
 
 
 @dataclass
@@ -51,14 +51,22 @@ class StepStats:
     deaths: int
     cooperations: int
     action_hist: Dict[str, int]
-    n_lineages: int
+    n_genotype_signatures: int
     match_ratio: float
     match_weighted: float
     collect_attempts: int
     collect_hits: int
     shannon_diversity: float
-    unused_frac: float
+    repeated_action_fraction: float
+    mean_unexecuted_slot_fraction: float
+    mean_amenability_proxy: float
+    mean_decision_count: float
     abiotic_flips: int
+
+    @property
+    def n_lineages(self) -> int:
+        """Deprecated compatibility alias for a non-genealogical count."""
+        return self.n_genotype_signatures
 
 
 class Simulation:
@@ -99,6 +107,7 @@ class Simulation:
                 stored_chips=taken,
                 territory=int(self.rng.integers(0, 3)),
                 organism_id=self._new_id(),
+                modifier_enabled=self.cfg.modifier_enabled,
             )
             self.organisms.append(org)
 
@@ -229,10 +238,20 @@ class Simulation:
                         if local:
                             partner = local[int(self.rng.integers(0, len(local)))]
                     if partner is not None:
-                        child_genome = recombine(org.genome, partner.genome, self.rng)
+                        child_genome = recombine(
+                            org.genome,
+                            partner.genome,
+                            self.rng,
+                            reserve_modifier=cfg.modifier_enabled,
+                        )
                     else:
                         child_genome = list(org.genome)
-                    child_genome = mutate(child_genome, self.rng, org.amenability)
+                    child_genome = mutate(
+                        child_genome,
+                        self.rng,
+                        org.amenability,
+                        reserve_modifier=cfg.modifier_enabled,
+                    )
                     dowry = org.stored_chips // 2
                     org.stored_chips -= dowry
                     shift = (org.genome[0] % (org.territory + 2)) - 1
@@ -244,6 +263,7 @@ class Simulation:
                         territory=max(0, min(4, org.territory + int(self.rng.integers(-1, 2)))),
                         parent_id=org.organism_id,
                         organism_id=self._new_id(),
+                        modifier_enabled=cfg.modifier_enabled,
                     )
                     newborns.append(child)
                     org.reproductions += 1
@@ -269,7 +289,14 @@ class Simulation:
             counts = np.array(list(Counter(o.genotype_signature() for o in alive).values()), dtype=float)
             probs = counts / counts.sum()
             shannon = float(-(probs * np.log2(np.clip(probs, 1e-12, 1.0))).sum())
-            unused = float(np.mean([o.unused_program_fraction() for o in alive]))
+            repeated_actions = float(
+                np.mean([o.repeated_action_slot_fraction() for o in alive])
+            )
+            unexecuted_slots = float(
+                np.mean([o.unexecuted_slot_fraction() for o in alive])
+            )
+            amenability_proxy = float(np.mean([o.amenability for o in alive]))
+            mean_decisions = float(np.mean([o.decision_count for o in alive]))
             stored = float(sum(o.stored_chips for o in alive))
             if stored > 0:
                 matched_store = sum(
@@ -282,7 +309,10 @@ class Simulation:
                 match_weighted = 0.0
         else:
             shannon = 0.0
-            unused = 0.0
+            repeated_actions = 0.0
+            unexecuted_slots = 0.0
+            amenability_proxy = 0.0
+            mean_decisions = 0.0
             match_weighted = 0.0
         stats = StepStats(
             step=len(self.history),
@@ -297,13 +327,16 @@ class Simulation:
             deaths=deaths,
             cooperations=cooperations,
             action_hist=action_hist,
-            n_lineages=len(sigs),
+            n_genotype_signatures=len(sigs),
             match_ratio=(match_hits / match_obs) if match_obs else 0.0,
             match_weighted=match_weighted,
             collect_attempts=collect_attempts,
             collect_hits=collect_hits,
             shannon_diversity=shannon,
-            unused_frac=unused,
+            repeated_action_fraction=repeated_actions,
+            mean_unexecuted_slot_fraction=unexecuted_slots,
+            mean_amenability_proxy=amenability_proxy,
+            mean_decision_count=mean_decisions,
             abiotic_flips=abiotic_flips,
         )
         self.history.append(stats)
@@ -315,7 +348,7 @@ class Simulation:
             if self.cfg.verbose_every and t % self.cfg.verbose_every == 0:
                 print(
                     f"t={stats.step:4d}  N={stats.n_alive:4d}  "
-                    f"lineages={stats.n_lineages:3d}  "
+                    f"genotypes={stats.n_genotype_signatures:3d}  "
                     f"H={stats.shannon_diversity:.2f}  "
                     f"match={stats.match_ratio:.2f}  "
                     f"chips[place/body/pool]="

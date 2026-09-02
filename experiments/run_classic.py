@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Replicate the five qualitative observations from Conrad & Pattee (1970)."""
+"""Conserved-chip prototype smoke run and descriptive telemetry.
+
+This script does not test all five historical observations. In particular,
+recombination propensity is not heritable in the present implementation.
+"""
 
 from __future__ import annotations
 
@@ -35,13 +39,17 @@ def run(seed: int, steps: int = 250) -> dict:
         "conserved_end": end,
         "conservation_ok": start == end,
         "n_alive_final": late[-1].n_alive if late else 0,
-        "n_lineages_final": late[-1].n_lineages if late else 0,
+        "n_genotype_signatures_final": (
+            late[-1].n_genotype_signatures if late else 0
+        ),
         "mean_coop_early": sum(s.cooperations for s in early) / max(1, len(early)),
         "mean_coop_late": sum(s.cooperations for s in late) / max(1, len(late)),
         "mean_genome_early": sum(s.mean_genome_len for s in early) / max(1, len(early)),
         "mean_genome_late": sum(s.mean_genome_len for s in late) / max(1, len(late)),
-        "env_utilization_early": sum(s.chips_bodies for s in early) / max(1, len(early)),
-        "env_utilization_late": sum(s.chips_bodies for s in late) / max(1, len(late)),
+        "chips_in_bodies_early": sum(s.chips_bodies for s in early)
+        / max(1, len(early)),
+        "chips_in_bodies_late": sum(s.chips_bodies for s in late)
+        / max(1, len(late)),
         "final_action_hist": late[-1].action_hist if late else {},
     }
 

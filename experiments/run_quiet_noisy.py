@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""Quiet vs noisy world — Conrad & Pattee observation (1) and (2).
+"""Quiet versus noisy reconstruction diagnostic.
 
 Quiet world: abiotic A/B patches never flip.
 Noisy world: each place independently flips state with probability p each step.
 
-Conrad reported that phenotype–environment matching rose when the world
-was quiet, and that adding noise produced a diversity of types with no
-slide toward one type.
+The historical observations motivate this comparison, but the current
+mechanisms and metrics are reconstruction choices rather than a replication.
 
 This script reruns that contrast. Matching is not a fitness function
 handed to the organisms; it is a consequence of harvest. An organism
@@ -62,18 +61,26 @@ def run_one(seed: int, flip_prob: float) -> dict:
         "flip_prob": flip_prob,
         "conservation_ok": start_chips == end_chips == 4000,
         "n_alive_final": last.n_alive,
-        "n_lineages_final": last.n_lineages,
+        "n_genotype_signatures_final": last.n_genotype_signatures,
         "match_early": window_mean(h, "match_ratio", 0, early_end),
         "match_late": window_mean(h, "match_ratio", late_start, len(h)),
         "match_w_early": window_mean(h, "match_weighted", 0, early_end),
         "match_w_late": window_mean(h, "match_weighted", late_start, len(h)),
         "diversity_early": window_mean(h, "shannon_diversity", 0, early_end),
         "diversity_late": window_mean(h, "shannon_diversity", late_start, len(h)),
-        "lineages_early": window_mean(h, "n_lineages", 0, early_end),
-        "lineages_late": window_mean(h, "n_lineages", late_start, len(h)),
-        "util_early": window_mean(h, "chips_bodies", 0, early_end),
-        "util_late": window_mean(h, "chips_bodies", late_start, len(h)),
-        "unused_late": window_mean(h, "unused_frac", late_start, len(h)),
+        "genotype_signatures_early": window_mean(
+            h, "n_genotype_signatures", 0, early_end
+        ),
+        "genotype_signatures_late": window_mean(
+            h, "n_genotype_signatures", late_start, len(h)
+        ),
+        "chips_in_bodies_early": window_mean(h, "chips_bodies", 0, early_end),
+        "chips_in_bodies_late": window_mean(
+            h, "chips_bodies", late_start, len(h)
+        ),
+        "repeated_actions_late": window_mean(
+            h, "repeated_action_fraction", late_start, len(h)
+        ),
         "mean_flips": window_mean(h, "abiotic_flips", 0, len(h)),
     }
 
@@ -89,7 +96,7 @@ def main() -> None:
     print(json.dumps(payload, indent=2))
 
     print("\n" + "=" * 64)
-    print("Quiet vs noisy  —  Conrad observations (1) and (2)")
+    print("Quiet versus noisy reconstruction diagnostic")
     print("=" * 64)
     print(f"{'':18} {'quiet':>12} {'noisy':>12} {'delta':>12}")
     rows = [
@@ -99,9 +106,9 @@ def main() -> None:
         ("weighted match late", "match_w_late"),
         ("diversity early", "diversity_early"),
         ("diversity late", "diversity_late"),
-        ("lineages late", "n_lineages_final"),
-        ("utilization late", "util_late"),
-        ("unused program", "unused_late"),
+        ("genotype types", "n_genotype_signatures_final"),
+        ("chips in bodies late", "chips_in_bodies_late"),
+        ("repeated actions", "repeated_actions_late"),
         ("alive final", "n_alive_final"),
     ]
     for label, key in rows:
@@ -121,10 +128,10 @@ def main() -> None:
         all(r["conservation_ok"] for r in quiet + noisy),
     )
     print()
-    print("Reading:")
-    print("  Observation (1): matching should rise more in the quiet world.")
-    print("  Observation (2): late diversity / lineage count should be")
-    print("  higher, or fall less, in the noisy world.")
+    print("Historical hypotheses motivating this diagnostic:")
+    print("  matching should rise more in the quiet world;")
+    print("  noisy worlds should sustain continuing type turnover.")
+    print("These four seeds do not establish either historical claim.")
 
 
 if __name__ == "__main__":

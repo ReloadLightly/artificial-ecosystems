@@ -21,7 +21,7 @@ def main() -> None:
         last = sim.history[-1]
         print(
             f"Ended with {last.n_alive} organisms, "
-            f"{last.n_lineages} distinct short genotypes, "
+            f"{last.n_genotype_signatures} distinct short genotypes, "
             f"mean genome length {last.mean_genome_len:.1f}."
         )
 
