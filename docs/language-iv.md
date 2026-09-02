@@ -1,71 +1,113 @@
-# Language-guided variation on EVOLVE IV-inspired physics
+# Typed controllers on EVOLVE IV-inspired physics
 
-> **Status: withdrawn integration design.** The IV-language experiment is not
-> executable. Both previously advertised commands fail because
-> `MetabolicConfig` has no `language` option, and the simulator has no complete
-> policy execution, inheritance, or mutation path. The former numerical table
-> and empirical interpretation have been removed because they were not results
-> of the current engine.
+> **Status: executable integration pilot.** The physics now executes typed
+> controller intents and every seed and newborn has an ID-keyed program record.
+> The former English-policy table remains withdrawn: this stage makes no model
+> call and is not a causal comparison of variation operators.
 
-## What exists
+## What was repaired
 
-The repository contains useful but disconnected scaffolding:
+The earlier façade failed before simulation and never connected policies to the
+step loop or reproduction. The repaired boundary now provides:
 
-- `src/evolve4` implements a two-metabolite, construction-capable world inspired
-  by EVOLVE IV;
-- `src/evolve_modern/iv_policies.py` contains text-policy parsing and heuristic
-  mutation helpers; and
-- `src/evolve_modern/iv.py` sketches how the two layers might be attached.
+- immutable `IVPercept`, `IVIntent`, and `IVTraits` values;
+- explicit movement modes: native `default`, deliberate `stay`, or a validated
+  current/left/right `target`;
+- construction, reproduction-gate, and reproduction-threshold intents that
+  remain subordinate to ecological physics;
+- a strict JSON-v1 executable program rather than substring matching over
+  English;
+- a persistent `bug_id -> PolicyRecord` registry outside `Bug`;
+- exactly one inherited or proposed child program per birth;
+- rejection-to-parent fallback for malformed proposals; and
+- a controller RNG seeded independently from the ecosystem RNG.
 
-That is design material, not an integrated experiment. IV organisms do not
-currently store a policy, the step loop does not ask a policy for an action,
-newborns do not inherit or mutate policies, and no working run invokes a real
-model.
+The controller is passed into `MetabolicSim` before seeding, so a program's
+metabolic role is known before the organism withdraws its initial nutrient or
+waste. Controller mode also permits zero stored matter when a chosen pile is
+empty instead of fabricating a unit.
 
-## Intended separation
+## Separation of responsibilities
 
-| Layer | Responsibility | Constraint |
+| Layer | Owns | Cannot do |
 |---|---|---|
-| Physics | Metabolism, movement, construction, fission, death, conservation | Never delegate matter accounting to text or a model |
-| Controller | Convert a typed local percept into a typed intent | Deterministic and replayable for a fixed program |
-| Variation operator | Propose a child controller at reproduction | Never score or select organisms |
-| Experiment harness | Match budgets, cache proposals, record provenance | Compare operators in the same ecological world |
+| `src/evolve4/simulation.py` | Matter, scheduling, metabolism, movement application, construction, fission, death | Parse programs or call a model |
+| `src/evolve4/control.py` | Frozen percept/intent/trait types and lifecycle protocol | Mutate bodies or hold policy text |
+| `src/evolve_modern/iv_policies.py` | JSON validation, canonical serialization, pure decisions, typed mutation | Access simulator state or ecological RNG |
+| `src/evolve_modern/iv.py` | Program registry, inheritance, proposal provenance, controller RNG | Own or create matter |
 
-The research question is not whether fluent text can control a bug. It is
-whether semantic variation changes evolvability while ecological persistence
-remains the only selector.
+With no controller, the original physics takes a literal bypass path. A frozen
+fixed-seed trace covers its history, final organisms, places, next ID, and RNG
+state. A neutral controller also reproduces native physics and ecosystem RNG
+exactly when legacy trait mutation is disabled, demonstrating that controller
+randomness is isolated.
 
-## Repair design
+## Executable program
 
-A safe integration should introduce explicit types such as `IVPercept`,
-`IVIntent`, `IVTraits`, and `IVController`. Movement needs a tri-state intent
-(`default`, `stay`, or a validated target) so omission cannot accidentally mean
-an action. Controllers should live in a registry keyed by organism ID until the
-physics model has a deliberate controller field and inheritance contract.
+Programs use exactly six top-level keys and reject missing, unknown, duplicate,
+or malformed fields:
 
-The first executable controller format should be a small typed DSL or JSON AST,
-not substring matching over unrestricted English. That gives grammar-preserving
-mutation, validation, serialization, and deterministic replay a common target.
-Language models can later propose typed rewrites that pass the same parser and
-validator as every other operator.
+```json
+{
+  "construction": "always",
+  "movement": "seek_opposite",
+  "reproduce_at": 14,
+  "require_uncrowded": false,
+  "schema": 1,
+  "traits": {
+    "construct": 1,
+    "role": "producer",
+    "taste": 1
+  }
+}
+```
 
-Randomness for scheduling, physics, reproduction, controller mutation, and any
-model sampling should be separated. A no-controller golden trace must remain
-unchanged when the integration is disabled.
+Allowed fields are deliberately small:
 
-## Evidence bar before re-advertising commands
+- role: `producer` or `recycler`;
+- taste: `-1` or `1`;
+- construction trait: `-1`, `0`, or `1`;
+- movement: `default`, `stay_if_fed`, `seek_resource`, or `seek_opposite`;
+- construction rule: `always`, `never`, or `until_nonzero`;
+- reproduction threshold: integer `8..30`; and
+- uncrowded requirement: JSON boolean.
 
-1. The ordinary EVOLVE IV-inspired run is unchanged with controllers disabled.
-2. A fixed controller produces a deterministic, unit-tested intent.
-3. Intent changes the intended action without bypassing metabolism or
-   conservation.
-4. Every newborn receives the specified inherited or mutated controller.
-5. Fixed seeds replay identical trajectories with cached model responses.
-6. All documented commands have smoke tests.
-7. Bit, GP, random-edit, and model-assisted treatments use matched proposal and
-   edit-size budgets.
-8. Results are generated from raw artifacts with failure rates and uncertainty,
-   not copied into this page by hand.
+Canonical JSON is the heritable representation. The offline heuristic changes
+at most one typed field. A future model adapter may propose JSON, but invalid
+output is logged and the exact parent program is inherited without retry or
+silent repair.
 
-Until those conditions hold, this page is a roadmap and the IV-language result
-claim remains withdrawn.
+## Run the pilot
+
+```bash
+PYTHONPATH=src python3 -m evolve_modern.iv
+PYTHONPATH=src python3 experiments/run_language_iv.py
+```
+
+The first command runs one controller-enabled ecosystem and reports conserved
+matter, executable-program diversity, and accepted/rejected proposal counts.
+The second retains its old filename for continuity but compares native physics
+with the typed integration across four fixed seeds. It labels raw cross-type
+contact correctly and prints the central limitation:
+
+> The arms differ in seed programs, control rules, and variation.
+
+Consequently, differences between their population statistics are debugging
+observations—not evidence that semantic variation helps, that English packages
+traits advantageously, or that niches emerged.
+
+## Evidence still needed for a real operator experiment
+
+1. Give every arm identical initial executable programs and physics.
+2. Compare point mutation, grammar-preserving GP, matched random edits, and
+   cached model proposals with matched proposal probability and edit distance.
+3. Separate ecosystem, scheduler, mortality, reproduction, and controller/model
+   random streams sufficiently for paired counterfactual runs.
+4. Record raw proposals, validation failures, parent/child programs, model and
+   prompt revisions, token use, and checksums.
+5. Measure offspring validity, viability, descendant establishment, robustness,
+   novelty, and recovery under unseen perturbations with uncertainty intervals.
+6. Generate every table from a versioned result bundle.
+
+Only that later design can test whether semantic variation changes
+evolvability while ecological persistence remains the sole selector.

@@ -38,6 +38,13 @@ are implementation choices. Calling the roles “metabolic types” does not sho
 that reciprocal dependence evolved: type is initialized directly, and the
 current experiment lacks partner-removal or metabolite-knockout tests.
 
+An optional typed controller can now receive a frozen local percept and request
+native movement, an explicit stay, or a validated local target, plus construction,
+reproduction gating, and reproduction-threshold changes. It owns no matter and
+is bypassed completely in ordinary runs. See
+[`language-iv.md`](language-iv.md) for the integration contract and its current
+evidential limits.
+
 ## Current measurements
 
 | Output | What it measures | What it does not establish |
@@ -58,13 +65,15 @@ is compared with density- and occupancy-preserving null models.
 ```bash
 PYTHONPATH=src python3 -m evolve4
 PYTHONPATH=src python3 experiments/run_niches.py
+PYTHONPATH=src python3 -m evolve_modern.iv
+PYTHONPATH=src python3 experiments/run_language_iv.py
 ```
 
-The experiment compares dense and sparse rings with construction enabled or
-disabled over four fixed seeds. It checks total matter at the beginning and end
-of each run. The current command prints raw trajectories and explicitly states
-that they do not establish niche formation. No numerical table is canonical
-until it is generated from a recorded result bundle with revision, environment,
+The construction experiment compares dense and sparse rings with construction
+enabled or disabled over four fixed seeds. The controller commands are separate
+integration pilots and do not make a language-model or operator-comparison
+claim. All check conserved matter. No numerical table is canonical until it is
+generated from a recorded result bundle with revision, environment,
 configuration, seeds, trajectories, and checksums.
 
 ## Stronger causal test

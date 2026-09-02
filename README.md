@@ -50,10 +50,10 @@ The audit began at [`9290a7f`](https://github.com/ReloadLightly/artificial-ecosy
 | Mutation-control experiment | **Runs; explicit extension** | Later-style modifier mode is opt-in and descriptive, not evidence of canalization |
 | EVOLVE IV-inspired metabolism | **Runs** | A useful construction ablation; the present contact statistic does not by itself establish nonrandom niche formation |
 | Text policies on the conserved-chip prototype | **Runs** | A deterministic keyword interpreter with a hand-written string mutator—not an LLM experiment |
-| Text policies on IV physics | **Broken integration** | Intended hooks exist, but the simulation does not execute or inherit policies |
+| Typed controllers on IV physics | **Runs; repaired integration pilot** | Strict JSON programs execute, inherit, and mutate through an ID-keyed registry with a separate RNG; this is not yet a language-model experiment |
 | Real-model variation | **Unintegrated wrapper only** | No working simulation invokes a real-model mutator end to end |
 
-Eight of the ten commands advertised in the original README now execute. The two IV-language commands remain broken and their reported tables remain withdrawn.
+All ten commands advertised in the original README now execute. The two repaired IV-controller commands are integration pilots, not evidence for the former language-treatment claims; their old table remains withdrawn.
 
 ## Quick start
 
@@ -70,6 +70,8 @@ PYTHONPATH=src python3 experiments/run_unused.py
 PYTHONPATH=src python3 experiments/run_amenability.py
 PYTHONPATH=src python3 -m evolve4
 PYTHONPATH=src python3 experiments/run_niches.py
+PYTHONPATH=src python3 -m evolve_modern.iv
+PYTHONPATH=src python3 experiments/run_language_iv.py
 ```
 
 The conserved total is the most important invariant:
@@ -201,8 +203,8 @@ The minimum release bar is:
 | Path | Role |
 |---|---|
 | [`src/evolve1970`](src/evolve1970) | Current conserved-chip prototype |
-| [`src/evolve4`](src/evolve4) | EVOLVE IV-inspired two-metabolite world |
-| [`src/evolve_modern`](src/evolve_modern) | Text-policy experiments and mutator adapters |
+| [`src/evolve4`](src/evolve4) | EVOLVE IV-inspired physics and typed controller boundary |
+| [`src/evolve_modern`](src/evolve_modern) | Validated controller programs, registry, and future mutator adapters |
 | [`experiments`](experiments) | Runnable comparisons |
 | [`docs/original-model.md`](docs/original-model.md) | Quarantined pre-audit note; not the current fidelity statement |
 | [`docs/evolve-family.md`](docs/evolve-family.md) | Quarantined pre-audit timeline; source-by-source repair pending |
@@ -212,7 +214,8 @@ Each experiment page should follow the same evidence template: primary-source cl
 ## Roadmap
 
 - [x] **P0 — Repair historical diagnostics:** separate repetition from execution coverage and make the later mutation-control modifier explicit.
-- [ ] **P0 — Finish the evidence surface:** integrate or de-advertise IV-language, keep its old tables withdrawn, and finish factual corrections in legacy pages.
+- [x] **P0 — Repair the IV controller boundary:** preserve controller-off physics, add typed intents and programs, isolate controller randomness, and restore both commands as integration pilots.
+- [ ] **P0 — Finish the evidence surface:** keep the old IV-language table withdrawn and finish factual corrections in quarantined legacy pages.
 - [ ] **P0 — Add the trust layer:** tests, CI, packaging, lock file, manifests, raw reference results, and documentation generated from artifacts.
 - [ ] **P1 — Build strict 1970 mode:** A–F phenome, mark/resolve semantics, local detritus, automatic reproduction, recognition codes, and separate System I/III configurations.
 - [ ] **P1 — Re-test EVOLVE IV:** flux provenance, spatial nulls, density controls, and partner-removal knockouts.
