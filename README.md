@@ -1,190 +1,238 @@
-# artificial-ecosystems
+# Artificial Ecosystems
 
-A 2026 reconstruction of **Conrad & Pattee (1970), "Evolution Experiments with an Artificial Ecosystem"** — and a place to rerun that experiment with LLMs and multi-agent systems, 56 years later.
+**The evolutionary-computation fossil record, reopened as an executable laboratory.**
 
-> “The only way to approach this problem is to design an artificial ecosystem which we can test and modify.”
-> — Conrad & Pattee, 1970
+This project revisits Conrad and Pattee's 1970 artificial ecosystem: a closed world in which organisms are not ranked by a fitness function, but must acquire finite matter, survive, interact, and reproduce. It then uses the same ecological accounting as a laboratory for modern genetic programming, artificial life, and language-assisted variation.
 
-[Journal of Theoretical Biology 28: 393–409](https://doi.org/10.1016/0022-5193(70)90077-9)
+> **Methodological status**
+>
+> This is not a line-by-line port. We have not located the original program or a complete executable specification. In this repository, **Historical** means supported by a cited primary source, **Reconstruction** means a documented implementation choice, and **Extension** means a new experiment. The current code is a promising mechanism-inspired prototype; a source-faithful 1970 mode is still in progress.
 
-## Why this paper
+[Conrad & Pattee (1970)](https://doi.org/10.1016/0022-5193(70)90077-9) · [EVOLVE IV](https://link.springer.com/chapter/10.1007/BFb0040799) · [Reviewed baseline](#reviewed-baseline-9290a7f) · [2026 research program](#the-2026-laboratory)
 
-Most evolutionary simulations impose a fitness function. Conrad and Pattee refused to. They built a small closed world with a **conservation law for matter** (“chips”), cell-like organisms that could collect, cooperate, repair, recombine, and reproduce, and then *watched what appeared*.
+## The idea
 
-Selection was not a score. It was bookkeeping.
+Many conventional evolutionary-computation systems start with an evaluator: a score, objective, reward, or ranking. Conrad and Pattee instead asked what organization would emerge when selection was only the consequence of local action in a finite material economy.
 
-That move is the ancestor of Tierra, Avida, and a lot of artificial life. It is also the opposite of how most LLM-agent demos work today (a rubric, a judge, a leaderboard). The bet of this repo is that Conrad’s stance is the more interesting one to revive.
+Every chip must be somewhere—in the environment or in an organism. A successful behavior is not declared successful; it leaves descendants because it obtains and retains enough matter to do so.
 
-## What is in here
+**Selection is bookkeeping.**
 
+That premise is still unusually relevant. It gives us a clean way to ask whether modern variation operators—typed GP, program synthesis, or LLM-assisted mutation—change evolvability while ecological survival, rather than an external judge, remains the selector.
+
+## Target architecture: museum layer, laboratory layer
+
+The repair plan will keep provenance visible by separating two kinds of work. The reviewed baseline does not yet enforce this boundary: later modifier machinery is still embedded in `evolve1970`.
+
+| Layer | Purpose | Rule |
+|---|---|---|
+| **Museum: 1970 reconstruction** | Recreate the published world and its canonical System I/System III contrasts | Every mechanism must trace to a primary source or appear in an ambiguity register |
+| **Laboratory: 2026 extensions** | Test new ecology, communication, GP, and language-assisted variation | Extensions may add mechanisms, but never silently rewrite the historical baseline |
+
+```mermaid
+flowchart TD
+    S["Primary sources"] --> H["Historical core"]
+    H --> R["Canonical replications"]
+    H --> L["2026 laboratory"]
+    L --> C["Causal ecology"]
+    L --> V["GP and semantic variation"]
 ```
-src/evolve1970/       1970 world + amenability + modifier codon
-src/evolve4/          IV: two metabolites, producers/recyclers, construction
-src/evolve_modern/    language policies as a mutator (1970 primitives and IV)
-docs/evolve-family.md
-docs/original-model.md
-docs/quiet-vs-noisy.md
-docs/unused-sequences.md
-docs/amenability.md
-docs/evolve4.md
-docs/language-iv.md
-experiments/run_classic.py
-experiments/run_quiet_noisy.py
-experiments/run_unused.py
-experiments/run_amenability.py
-experiments/run_niches.py
-experiments/run_language_iv.py
-```
 
-The reconstruction is documented, including the assumptions we had to make because the 1970 source code is lost and the paper is paywalled. See [`docs/original-model.md`](docs/original-model.md).
+## Reviewed baseline: 9290a7f
 
-## Run it
+Status below refers to commit [`9290a7f`](https://github.com/ReloadLightly/artificial-ecosystems/tree/9290a7fae9d238ef7a015059baa0668fbf07f6ba). It is intentionally explicit so planned work cannot be mistaken for a result.
+
+| Track | Execution status | Defensible interpretation |
+|---|---|---|
+| Conserved-chip core | **Runs** | A compact, deterministic reconstruction; chip conservation holds in tested runs |
+| Quiet versus noisy worlds | **Runs** | Matching differs between treatments; the historical System I/System III pattern is not yet reproduced faithfully |
+| Unused sequence experiment | **Broken; proxy inadequate** | Does not yet measure unexecuted encoded positions |
+| Amenability experiment | **Broken; custom extension** | An EVOLVE-inspired modifier experiment, not a historical replication |
+| EVOLVE IV-inspired metabolism | **Runs** | A useful construction ablation; the present contact statistic does not by itself establish nonrandom niche formation |
+| Text policies on the conserved-chip prototype | **Runs** | A deterministic keyword interpreter with a hand-written string mutator—not an LLM experiment |
+| Text policies on IV physics | **Broken integration** | Intended hooks exist, but the simulation does not execute or inherit policies |
+| Real-model variation | **Unintegrated wrapper only** | No working simulation invokes a real-model mutator end to end |
+
+Six of the ten commands advertised in the previous README execute at this commit. Four fail, so their reported tables should be treated as unverified until the integrations and metrics are repaired and regenerated.
+
+## Quick start
+
+The working entry points were audited with Python 3.12.13 and NumPy 2.3.5. The repository currently declares NumPy 1.24 or newer.
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 python3 -m pip install -r requirements.txt
+
 PYTHONPATH=src python3 -m evolve1970
-PYTHONPATH=src python3 -m evolve_modern
-PYTHONPATH=src python3 experiments/run_classic.py
 PYTHONPATH=src python3 experiments/run_quiet_noisy.py
-PYTHONPATH=src python3 experiments/run_unused.py
-PYTHONPATH=src python3 experiments/run_amenability.py
 PYTHONPATH=src python3 -m evolve4
 PYTHONPATH=src python3 experiments/run_niches.py
-PYTHONPATH=src python3 -m evolve_modern.iv
-PYTHONPATH=src python3 experiments/run_language_iv.py
 ```
 
-You should see population size, lineage count, and a running conservation check:
+The conserved total is the most important invariant:
 
-```
-chips[place/body/pool] = …   conserved = 4000
-```
-
-If that number ever drifts, the world is broken.
-
-## The 1970 design, in one paragraph
-
-A circular one-dimensional world of *places*. Each place has an abiotic state (A or B) and a pile of chips. Organisms occupy a territory of contiguous places. Each organism has a genome of symbol pairs that decode into a cyclic program over six primitives (`collect`, `forage`, `cooperate`, `repair`, `reproduce`, `wait`). Behaviour also depends on an internal state and a local input state. Chips are spent on metabolism, repair, and offspring. The dead return their chips to a matter pool that rains back onto the world. Mutation is point + length; recombination is break-and-splice. No fitness function.
-
-## What Conrad reported, and what we want to see again
-
-1. Phenotype–environment matching rises when the world is quiet.
-2. Noise produces diversity rather than a slide toward one type.
-3. Recombination rate tends to fall.
-4. Utilization of the environment tends to rise.
-5. Successful genomes carry sequences that are never executed.
-
-`experiments/run_classic.py` is the start of that checklist.
-`experiments/run_quiet_noisy.py` is observations (1) and (2): a still
-A/B world versus one where places flicker. First rerun, four seeds,
-280 steps:
-
-- matching rose in both worlds and rose *more* when the world was quiet
-  (0.56 → 0.84 quiet, 0.55 → 0.72 noisy)
-- the noisy world kept more lineages and higher Shannon diversity
-- chips stayed conserved
-
-Write-up: [`docs/quiet-vs-noisy.md`](docs/quiet-vs-noisy.md).
-
-`experiments/run_unused.py` is observation (5). Structural unused *rises*
-among the rich (0.30 → 0.35) while dynamic unused falls. Winners fire
-the distinct actions they encode and keep extra copies of `forage`.
-Dead tape hitchhikes. Write-up: [`docs/unused-sequences.md`](docs/unused-sequences.md).
-
-`experiments/run_amenability.py` is the 1980/1985 claim that evolvability
-is selectable. A modifier codon, not executed, sets how children mutate.
-Amenability falls in every world and falls most in a slowly flickering
-one — EVOLVE II’s “resistance to change.” Write-up: [`docs/amenability.md`](docs/amenability.md).
-
-## The EVOLVE episodes
-
-One program, four numbered models, twenty-nine years. The invariant
-is the 1970 refusal: do not impose a fitness function. What changes
-is how rich the closed world is allowed to be. Full write-up:
-[`docs/evolve-family.md`](docs/evolve-family.md).
-
-```
-1970   Conrad & Pattee      chips, 1-D ring, six routines
-1981   EVOLVE               light, temperature, amenability locus
-1985   EVOLVE II            scheduled abiotic change → canalization
-1985   EVOLVE III           2-D, 15 traits, critical vs modifier DNA
-1989   "artificial worlds"  the method gets a name
-1992   Tierra (sideways)    CPU time as the conserved resource
-1998   EVOLVE IV            metabolites + niche construction
-2004   —                    Conrad dies. There is no V.
-2026   this repo            same refusal; language as a mutator
+```text
+chips[place/body/pool] = ...   conserved = 4000
 ```
 
-**1970 — Conrad & Pattee.** A 1-D ring, chips, six routines, no
-score. Matching rises when the world is quiet. Noise keeps types
-around. Successful tapes carry unused sequence. This is
-`src/evolve1970`.
+If it drifts, the simulated world is broken. Canonical runs should eventually enforce this after every step, not only at the beginning and end.
 
-**1981 — EVOLVE.** Light, temperature, three genes, an amenability
-locus. The new claim: evolvability itself is selectable.
-`experiments/run_amenability.py`.
+## What the 1970 paper actually specifies
 
-**1985 — EVOLVE II.** The abiotic world is put on a schedule. In
-slowly varying conditions, organisms develop resistance to
-phenotypic change — canalization without being programmed.
+The published system is more particular—and stranger—than a generic six-action agent simulation. A genome of symbol pairs maps to a phenome over six symbols. Organisms occupy contiguous territories in a finite one-dimensional world, and a two-pass procedure first records marks/interactions and then resolves their material consequences.
 
-**1985 — EVOLVE III** (Rizki & Conrad). Two-dimensional regions,
-fifteen quantitative traits, producers and decomposers, a nucleic
-acid string split into critical sections and modifier sections.
-Parasitism appears in a 1992 extension. Mutualism does not, because
-an organism cannot eat both the environment and a neighbour at once.
-This repo’s last codon pair, not executed, is that split in miniature.
+The exact genomic alphabet and pair-to-symbol decoder still require a page-level primary citation; the repository's `{0,1,2,3}` alphabet and modulo decoder are reconstruction choices.
 
-**1989 — “artificial worlds.”** Conrad & Rizki name the method.
-Mass, energy, genomes, phenomes, a map between them. Fitness and
-population dynamics both emerge.
+| Phenome symbol | Published role, summarized |
+|---|---|
+| **A / B** | Compare or match the local environmental state |
+| **C** | Seek a conjugate for genetic exchange |
+| **D** | Allocate a chip to repair |
+| **E** | Enter or leave a parametric mode that conditionally changes phenome interpretation |
+| **F** | Seek a symbiont and participate in chip sharing |
 
-**1998–1999 — EVOLVE IV** (Brewster & Conrad). Metabolites and
-niche construction. Organisms exchange chemical species *and*
-modify the ground under their neighbours. They report that niches
-form. There is no EVOLVE V.
+Reproduction follows automatically when an organism doubles its material size; it is not one of the six phenome symbols. Recognition for conjugation and symbiosis is heritable. Death and excess matter return locally along places associated with the organism's phenome, rather than entering a global rain pool.
 
-`src/evolve4` reconstructs both published interactions. Producers
-turn nutrient into waste. Recyclers turn waste back into nutrient.
-Each body also carries a taste for the local condition and a
-construct gene that pushes that condition up or down. Conversion,
-taste, and construct are heritable. No score.
+### Fidelity matrix
 
-First rerun, four seeds. Both metabolic types persist in roughly
-equal numbers. On a packed ring the neighbour-niche index saturates
-either way. On a sparse ring, construction is what sorts them
-(niche 0.74 without digging, 0.88 with it). Chips stay conserved.
+| Mechanism | Published target | Current implementation | Status |
+|---|---|---|---|
+| Update semantics | Mark first, resolve consequences second | Randomized sequential actions mutate shared state immediately | **Replace for historical mode** |
+| Phenome | A–F comparison, conjugation, repair, parameterization, symbiosis | `collect`, `forage`, `cooperate`, `repair`, `reproduce`, `wait` | **Reconstruct** |
+| Reproduction | Automatic after material doubling | Explicit cyclic `reproduce` action plus threshold | **Reconstruct** |
+| Resource allocation | Marks compete for place chips by integer division | Fixed harvest amount with a matching bonus | **Reconstruct** |
+| Death and detritus | Spatial return associated with phenome positions | Global matter pool followed by random rain | **Reconstruct** |
+| Sexuality and symbiosis | Evolvable recognition codes | Fixed global recombination probability; generic cooperation | **Missing** |
+| Later EVOLVE modifiers | Separate later experiments | Always encoded in the final pair of `evolve1970` genomes | **Separate from 1970 mode** |
 
+The appropriate claim today is **source-transparent conceptual reconstruction**, not “faithful recreation.” The latter becomes defensible when the historical mode, ambiguity register, tests, and reference results agree with the primary sources.
+
+## Canonical historical questions
+
+Conrad and Pattee's 1970 paper contrasted a stable System I with a noisy System III; these treatment names are not the later EVOLVE I/EVOLVE III models. Their reports include homogenization and very low turnover in the quiet system, and continuing succession, changing composition, symbiosis, increasing environmental utilization, and population oscillation in the noisy system.
+
+The next historical milestone is not another headline metric. It is a paired, source-faithful reproduction suite:
+
+1. implement the A–F phenome and genuine mark/resolve update;
+2. implement automatic reproduction, spatial detritus return, and recognition codes;
+3. freeze named `system-i.toml` and `system-iii.toml` configurations;
+4. record births, deaths, genealogy, executed positions, material flows, and recognition events;
+5. run matched seeds with uncertainty intervals and publish the raw result bundle;
+6. report observations that fail as clearly as those that succeed.
+
+## The 2026 laboratory
+
+The modern experiment should not merely put a language model inside each organism. The sharper question is:
+
+> **Can semantic variation change evolvability when selection remains entirely ecological?**
+
+### Flagship experiment: matched variation operators
+
+All treatments should compile to the same small, typed controller language and run in the same physical world. Only the variation operator changes.
+
+| Arm | Variation operator |
+|---|---|
+| A | Point and size mutation |
+| B | Grammar-preserving subtree mutation and crossover |
+| C | Random valid-program edits matched for edit size |
+| D | LLM-assisted program rewrite followed by deterministic parsing and validation |
+
+The comparison must match birth opportunities, proposal budgets, executable phenotype at initialization, and edit-size distributions. Ecological reproduction remains the only selector. The model is a source of structured variation—not a judge and not evidence of emergence by itself.
+
+Measure syntactic validity, offspring viability, descendant establishment, mutational robustness, reachable behavioral novelty, recovery after unseen environmental shocks, and **persistent causal innovation**. An innovation counts only if it persists through descendants and a knockout shows that it changes ecological function.
+
+LLM outputs must be cached with model revision, prompt, decoding settings, parent/child program, organism and birth IDs, and raw response. Every resulting ecosystem should replay without another model call.
+
+### A conjectural EVOLVE V (2026 extension)
+
+The 1970 paper itself points toward richer ecological control: local communication, growth regulation, territoriality, self-thinning, and faster detritus cycling. A compelling continuation would ask:
+
+> **Can evolvable local communication and restraint prevent quiet-world stasis and noisy-world overcompetition while preserving succession—without a global fitness function?**
+
+Add costly local signals and separately evolvable sender/receiver rules. Compare communication off, cost-matched random signals, send-only, receive-only, and signal-permutation interventions. Treat mutual information as supporting evidence; causal behavior change under message intervention is the primary test.
+
+### Longer-horizon directions
+
+- **Causal niche construction.** Trace metabolite provenance and compare cross-type contact with occupancy-preserving permutation nulls and placebo construction.
+- **Evolvable chemistry.** Let genomes encode material transformations and ask whether persistent new trophic dependencies arise.
+- **Evolvable genotype–phenotype maps.** Coevolve programs and their interpreter/codebook, bringing Pattee's symbol–matter problem into the model itself.
+- **Major transitions.** Add costly adhesion, shared stores, local signaling, and collective fission to test whether heritable ecological individuals emerge without group scores.
+- **Open-endedness with controls.** Distinguish exploratory, expansive, and transformational novelty; do not equate a rising genotype count with open-ended evolution.
+
+Modern work on [LLMs as evolutionary operators](https://arxiv.org/abs/2206.08896), [LLM-based genetic programming](https://arxiv.org/abs/2401.07102), and [ShinkaEvolve](https://proceedings.iclr.cc/paper_files/paper/2026/hash/7886b9bafe76c52fd568db10ff9772df-Abstract-Conference.html) supplies useful operator designs. Pattee and Sayama's argument for [evolved open-endedness](https://direct.mit.edu/artl/article-abstract/25/1/4/2911/Evolved-Open-Endedness-Not-Open-Ended-Evolution) supplies the more important conceptual constraint: open-endedness should become part of what the system explains.
+
+## Reproducibility contract
+
+Every canonical result should be generated from a committed artifact rather than copied by hand into prose.
+
+```text
+experiments/
+  configs/                 # named, immutable treatments
+results/reference/
+  <experiment>-v1/
+    manifest.json          # commit, environment, config, seeds, schema
+    trajectories.jsonl     # raw time series
+    summary.json           # estimates and uncertainty
+    checksums.json
+    figures/
+tests/
+  test_conservation.py
+  test_replay.py
+  test_entrypoints.py
+  test_historical_semantics.py
 ```
-PYTHONPATH=src python3 -m evolve4
-# t=225  N=273  P/R=147/128  conserved=4000  niche=1.00
-PYTHONPATH=src python3 experiments/run_niches.py
-```
 
-Write-up: [`docs/evolve4.md`](docs/evolve4.md).
+The minimum release bar is:
 
-**Sideways, 1991–92.** Ray’s Tierra substitutes CPU time for chips.
-Same stance, different conserved resource.
+- conservation and non-negativity checked after every step;
+- deterministic fixed-seed replay;
+- separate named random streams for environment, scheduling, mortality, reproduction, recombination, and mutation;
+- smoke tests for every documented command;
+- persistent genealogy and event logging;
+- dependency bounds plus a frozen canonical environment;
+- tables and figures generated from versioned result artifacts;
+- explicit labels for **verified**, **approximate**, **exploratory**, and **planned** claims.
 
-**2026.** `evolve_modern` keeps the chip physics — and now the IV
-metabolite physics — and lets a language model act only as a
-mutator. Not a judge.
+## Repository guide
 
-## The 2026 extension
+| Path | Role |
+|---|---|
+| [`src/evolve1970`](src/evolve1970) | Current conserved-chip prototype |
+| [`src/evolve4`](src/evolve4) | EVOLVE IV-inspired two-metabolite world |
+| [`src/evolve_modern`](src/evolve_modern) | Text-policy experiments and mutator adapters |
+| [`experiments`](experiments) | Runnable comparisons |
+| [`docs/original-model.md`](docs/original-model.md) | Published details versus reconstruction choices |
+| [`docs/evolve-family.md`](docs/evolve-family.md) | Historical context across the EVOLVE family |
 
-`evolve_modern` does not touch conservation. What changes is the **variation operator**. There are two overlays:
+Each experiment page should follow the same evidence template: primary-source claim; research question; operationalization; reconstruction deviations; hypothesis and null; configuration and seeds; artifact-generated results with uncertainty; robustness checks; narrow interpretation; limitations; exact reproduction command.
 
-- **1970 physics** (`python -m evolve_modern`). A policy compiles onto the six primitives. `heuristic_mutate_policy` rewrites the child’s text at birth.
-- **IV physics** (`python -m evolve_modern.iv`). A policy compiles onto conversion, taste, construct, and an `Intent` (stand here, dig or don’t, fission threshold). `heuristic_mutate_iv_policy` is the offline mutator. Wrap any `prompt → text` callable with `make_llm_mutator` to use a real model.
+## Roadmap
 
-The model is a mutator, not a judge. That is the whole point.
+- [ ] **P0 — Repair the evidence surface:** fix or remove four broken entry points, withdraw ungenerated tables, correct metric names and factual errors.
+- [ ] **P0 — Add the trust layer:** tests, CI, packaging, lock file, manifests, raw reference results, and documentation generated from artifacts.
+- [ ] **P1 — Build strict 1970 mode:** A–F phenome, mark/resolve semantics, local detritus, automatic reproduction, recognition codes, and separate System I/III configurations.
+- [ ] **P1 — Re-test EVOLVE IV:** flux provenance, spatial nulls, density controls, and partner-removal knockouts.
+- [ ] **P2 — Compare GP operators:** one typed language, matched mutation budgets, ecological selection only.
+- [ ] **P2 — Add cached LLM variation:** preregistered comparisons and deterministic replay.
+- [ ] **P3 — Explore communication, evolvable chemistry, codebooks, and new ecological individuals.**
 
-First rerun of the IV overlay, four seeds, sparse ring: both types persist, chips stay conserved, niche holds (0.86 → 0.89), and construct-match rises (0.36 → 0.57) because “prefer alkali / raise the ground” is usually one sentence. Write-up: [`docs/language-iv.md`](docs/language-iv.md).
+## Sources and citation
 
-## Status
+Start with the primary sources:
 
-This is a research sketch, not a museum-grade replica. The six primitives, the rain schedule, and the metabolic-cost rule are reconstruction choices. If you have the 1970 paper PDF, EVOLVE source, or a clearer description of the original routine set, open an issue.
+- Michael Conrad and Howard H. Pattee, [“Evolution Experiments with an Artificial Ecosystem”](https://doi.org/10.1016/0022-5193(70)90077-9), *Journal of Theoretical Biology* 28, 1970.
+- Michael Conrad and Mateen M. Rizki, [“The Artificial Worlds Approach to Emergent Evolution”](https://pubmed.ncbi.nlm.nih.gov/2627568/), 1989.
+- Jon Brewster and Michael Conrad, [“Evolve IV: A Metabolically-Based Artificial Ecosystem Model”](https://link.springer.com/chapter/10.1007/BFb0040799), 1998.
+- Jon J. Brewster and Michael Conrad, [“Computer Experiments on the Development of Niche Specialization in an Artificial Ecosystem”](https://doi.org/10.1109/CEC.1999.781957), 1999.
+- Howard H. Pattee and Hiroki Sayama, [“Evolved Open-Endedness, Not Open-Ended Evolution”](https://direct.mit.edu/artl/article-abstract/25/1/4/2911/Evolved-Open-Endedness-Not-Open-Ended-Evolution), 2019.
+
+Please cite the original papers when discussing their systems, and cite a tagged release of this repository when discussing this implementation. A `CITATION.cff` and archival DOI are planned for the first reproducible release.
+
+## Contributing
+
+Historical corrections are especially welcome. A useful issue or pull request should identify the primary source and page/section, distinguish the published mechanism from the proposed reconstruction, and include a test when behavior changes.
 
 ## License
 
-MIT. The 1970 paper remains under its publisher’s copyright; this repo contains no verbatim text from it.
+Code in this repository is MIT licensed. The historical papers remain under their publishers' copyrights. The repository may include brief, attributed quotations but does not reproduce the papers or the unrecovered original source code.

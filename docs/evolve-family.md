@@ -1,5 +1,11 @@
 # The EVOLVE episodes
 
+> **Pre-audit document.** This timeline contains unresolved attributions,
+> historical errors, and reconstruction claims that are being corrected. Do
+> not treat it as the current evidence statement. See the README's
+> reviewed-baseline and fidelity sections; a source-by-source rewrite is a
+> pending repair.
+
 One research program, four numbered models, twenty-nine years.
 The invariant is the sentence from 1970: do not impose a fitness
 function. Let selection be the bookkeeping of a finite world.
