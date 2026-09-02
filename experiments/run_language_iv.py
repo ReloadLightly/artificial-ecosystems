@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Language mutator on EVOLVE IV physics.
+"""Offline typed-controller integration pilot on EVOLVE IV-inspired physics.
 
-Compare the bit-string IV world to the same world where conversion,
-taste, construct, and step intent are compiled from English policies
-that mutate only at birth.
+The filename is retained for continuity with the withdrawn language prototype.
+No natural-language policy or model call executes in this repair stage.
 """
 
 from __future__ import annotations
@@ -14,84 +13,118 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from evolve4.simulation import MetabolicSim, MetabolicConfig
-from evolve_modern.iv import attach_language, unique_policies
+from evolve4.simulation import MetabolicConfig, MetabolicSim
+from evolve_modern.iv import build_controlled_sim, unique_policies
+
+
+SEEDS = (1998, 1999, 1970, 2026)
+STEPS = 200
 
 
 def window_mean(history, attr, start, end):
-    sl = history[start:end]
-    return sum(getattr(s, attr) for s in sl) / max(1, len(sl))
+    sample = history[start:end]
+    return sum(getattr(row, attr) for row in sample) / max(1, len(sample))
 
 
-def run_one(seed: int, language: bool) -> dict:
-    sim = MetabolicSim(
-        MetabolicConfig(
-            steps=200,
-            n_places=96,
-            n_organisms=36,
-            max_organisms=90,
-            harvest=5,
-            seed=seed,
-            construction=True,
-            language=language,
-            verbose_every=0,
-        )
+def run_one(seed: int, controlled: bool) -> dict:
+    config = MetabolicConfig(
+        steps=STEPS,
+        n_places=96,
+        n_organisms=36,
+        max_organisms=90,
+        harvest=5,
+        seed=seed,
+        construction=True,
+        verbose_every=0,
     )
-    if language:
-        attach_language(sim)
+    controller = None
+    if controlled:
+        sim, controller = build_controlled_sim(
+            config,
+            controller_seed=1_000_003 + seed,
+        )
+    else:
+        sim = MetabolicSim(config)
+
     start = sim.conserved()
     sim.run()
     end = sim.conserved()
-    h = sim.history
-    last = h[-1]
-    policies = unique_policies(sim) if language else []
+    history = sim.history
+    last = history[-1]
+    late_start = max(0, len(history) - 40)
+    policies = unique_policies(sim) if controlled else []
     return {
         "seed": seed,
-        "language": language,
-        "conservation_ok": start == end == 4000,
-        "producers_late": window_mean(h, "n_producers", len(h) - 40, len(h)),
-        "recyclers_late": window_mean(h, "n_recyclers", len(h) - 40, len(h)),
-        "niche_early": window_mean(h, "niche_index", 0, 30),
-        "niche_late": window_mean(h, "niche_index", len(h) - 40, len(h)),
-        "cmatch_late": window_mean(h, "construct_match", len(h) - 40, len(h)),
-        "cvar_late": window_mean(h, "condition_var", len(h) - 40, len(h)),
+        "arm": "typed-controller" if controlled else "native",
+        "controller_seed": (1_000_003 + seed) if controlled else None,
+        "conservation_ok": start == end == config.total_units,
+        "producers_late": window_mean(
+            history, "n_producers", late_start, len(history)
+        ),
+        "recyclers_late": window_mean(
+            history, "n_recyclers", late_start, len(history)
+        ),
+        "cross_type_contact_early": window_mean(
+            history, "niche_index", 0, 30
+        ),
+        "cross_type_contact_late": window_mean(
+            history, "niche_index", late_start, len(history)
+        ),
+        "construct_match_late": window_mean(
+            history, "construct_match", late_start, len(history)
+        ),
+        "condition_variance_late": window_mean(
+            history, "condition_var", late_start, len(history)
+        ),
         "alive_final": last.n_alive,
-        "n_policies": len(policies),
+        "n_executable_programs": len(policies),
+        "mutation_attempts": (
+            controller.mutation_attempts if controller is not None else 0
+        ),
+        "accepted_proposals": (
+            controller.accepted_proposals if controller is not None else 0
+        ),
+        "rejected_proposals": (
+            controller.rejected_proposals if controller is not None else 0
+        ),
     }
 
 
 def mean(rows, key):
-    return sum(r[key] for r in rows) / max(1, len(rows))
+    return sum(row[key] for row in rows) / max(1, len(rows))
 
 
 def block(label: str, rows: list[dict]) -> None:
     print(f"\n{label}")
-    print(f"{'':24} {'value':>10}")
+    print(f"{'':28} {'value':>10}")
     for name, key in [
         ("producers late", "producers_late"),
         ("recyclers late", "recyclers_late"),
-        ("niche early", "niche_early"),
-        ("niche late", "niche_late"),
-        ("construct-match late", "cmatch_late"),
-        ("condition var late", "cvar_late"),
+        ("cross-type contact early", "cross_type_contact_early"),
+        ("cross-type contact late", "cross_type_contact_late"),
+        ("construct-match late", "construct_match_late"),
+        ("condition variance late", "condition_variance_late"),
         ("alive final", "alive_final"),
-        ("distinct policies", "n_policies"),
+        ("executable programs", "n_executable_programs"),
+        ("mutation attempts", "mutation_attempts"),
+        ("accepted proposals", "accepted_proposals"),
+        ("rejected proposals", "rejected_proposals"),
     ]:
-        print(f"{name:24} {mean(rows, key):10.3f}")
-    print("conservation", all(r["conservation_ok"] for r in rows))
+        print(f"{name:28} {mean(rows, key):10.3f}")
+    print("conservation", all(row["conservation_ok"] for row in rows))
 
 
 def main() -> None:
-    seeds = (1998, 1999, 1970, 2026)
-    bits = [run_one(s, False) for s in seeds]
-    words = [run_one(s, True) for s in seeds]
-    print(json.dumps({"bits": bits, "language": words}, indent=2))
-    block("IV bits (no language)", bits)
-    block("IV + language mutator", words)
+    native = [run_one(seed, False) for seed in SEEDS]
+    controlled = [run_one(seed, True) for seed in SEEDS]
+    payload = {"native": native, "typed_controller": controlled}
+    print(json.dumps(payload, indent=2))
+    block("native IV-inspired physics", native)
+    block("typed-controller integration", controlled)
     print()
-    print("Same conserved metabolites. Same construction. The only")
-    print("change is that role, taste, construct, and step intent")
-    print("are written in English and rewritten at birth.")
+    print("Integration diagnostic only: the arms differ in seed programs,")
+    print("control rules, and variation. This is not a causal operator")
+    print("comparison, an LLM result, or evidence of niche formation.")
 
 
 if __name__ == "__main__":

@@ -11,7 +11,8 @@ def main() -> None:
     last = sim.history[-1]
     print(
         f"{last.n_alive} alive, producers={last.n_producers}, "
-        f"recyclers={last.n_recyclers}, niche={last.niche_index:.2f}"
+        f"recyclers={last.n_recyclers}, "
+        f"cross-type contact={last.niche_index:.2f}"
     )
 
 

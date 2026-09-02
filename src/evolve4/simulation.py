@@ -1,35 +1,16 @@
-"""EVOLVE IV reconstruction: metabolites + niche construction.
+"""EVOLVE IV-inspired metabolite and construction physics.
 
-Brewster & Conrad (1998, LNCS 1447; 1999, CEC) built EVOLVE IV to
-watch niche proliferation. Two published interactions:
+This compact model is informed by Brewster and Conrad's 1998–1999 EVOLVE IV
+work but is not a recovered or source-faithful implementation. Every place
+holds nutrient, waste, and a non-material signed condition. Nutrient, waste,
+and matter stored in living bodies are conserved; the condition can be changed
+locally and relaxes toward zero. A raw cross-type contact statistic is exposed
+for diagnostics, but it is density-sensitive and is not evidence of niche
+formation without appropriate null models and interventions.
 
-    1. organisms exchange metabolites
-    2. organisms modify the local environment to the benefit or
-       detriment of whoever is standing next door
-
-They reported that niche formation occurs. Source is lost; this is
-the smallest closed world in which both sentences can be true.
-
-Physics
--------
-* every place holds two metabolite piles (nutrient N, waste W) and
-  a signed *condition* (soil / pH / moisture — not matter)
-* N + W + stored energy is conserved
-* producer  : eats N, excretes W
-* recycler  : eats W, excretes N
-* conversion direction, taste, and construct are heritable
-* harvest yield is boosted when local condition matches taste,
-  cut when it opposes taste
-* after acting, an organism adds its construct value to the place
-  (clamped). Condition slowly relaxes toward 0.
-* death returns stored energy as a mix to the local place
-* no fitness function
-
-A *metabolic niche* is spatial sorting: producers living next to
-recyclers so each one's waste is the other's food.
-
-A *constructed niche* is a patch whose condition has been pushed
-away from 0 in a direction that some resident prefers.
+The optional typed controller changes local intent and heritable traits through
+an explicit boundary. It never owns matter accounting, scheduling, mortality,
+or conservation.
 """
 
 from __future__ import annotations
@@ -38,6 +19,8 @@ from dataclasses import dataclass
 from typing import List
 
 import numpy as np
+
+from .control import IVController, IVIntent, IVPercept, IVTraits, MovementMode
 
 
 CONDITION_MIN = -3
@@ -101,8 +84,14 @@ class StepRow:
 
 
 class MetabolicSim:
-    def __init__(self, config: MetabolicConfig | None = None):
+    def __init__(
+        self,
+        config: MetabolicConfig | None = None,
+        *,
+        controller: IVController | None = None,
+    ):
         self.cfg = config or MetabolicConfig()
+        self.controller = controller
         self.rng = np.random.default_rng(self.cfg.seed)
         n = self.cfg.n_places
         half = self.cfg.total_units // 2
@@ -134,16 +123,48 @@ class MetabolicSim:
             producer = bool(i % 2 == 0)
             taste = 1 if self.rng.random() < 0.5 else -1
             construct = int(self.rng.integers(-1, 2))  # -1, 0, 1
-            taken = self._take(pos, producer, start)
-            self.bugs.append(
-                Bug(
-                    position=pos,
-                    stored=max(1, taken),
+            if self.controller is None:
+                # Keep the controller-free initialization path literal: its
+                # fixed-seed trajectory is a regression contract.
+                taken = self._take(pos, producer, start)
+                self.bugs.append(
+                    Bug(
+                        position=pos,
+                        stored=max(1, taken),
+                        producer=producer,
+                        taste=taste,
+                        construct=construct,
+                        genome_tag=int(self.rng.integers(0, 16)),
+                        bug_id=self._id(),
+                    )
+                )
+                continue
+
+            genome_tag = int(self.rng.integers(0, 16))
+            bug_id = self._id()
+            traits = self.controller.initial_traits(
+                bug_id,
+                i,
+                IVTraits(
                     producer=producer,
                     taste=taste,
                     construct=construct,
-                    genome_tag=int(self.rng.integers(0, 16)),
-                    bug_id=self._id(),
+                ),
+            )
+            if not isinstance(traits, IVTraits):
+                raise TypeError("controller.initial_traits must return IVTraits")
+            taken = self._take(pos, traits.producer, start)
+            self.bugs.append(
+                Bug(
+                    position=pos,
+                    # Unlike the legacy seed path, controller mode must not
+                    # mint a unit when its chosen metabolite pile is empty.
+                    stored=taken,
+                    producer=traits.producer,
+                    taste=traits.taste,
+                    construct=traits.construct,
+                    genome_tag=genome_tag,
+                    bug_id=bug_id,
                 )
             )
 
@@ -230,6 +251,61 @@ class MetabolicSim:
             return 0.0
         return sum(1 for b in scored if b.construct == b.taste) / len(scored)
 
+    def _stock_for(self, b: Bug, position: int) -> int:
+        place = self.places[position]
+        return place.nutrient if b.producer else place.waste
+
+    def _controller_percept(self, b: Bug, living: List[Bug]) -> IVPercept:
+        left = (b.position - 1) % self.cfg.n_places
+        right = (b.position + 1) % self.cfg.n_places
+        local_others = [
+            other
+            for other in living
+            if other.alive
+            and other.bug_id != b.bug_id
+            and other.position in (left, b.position, right)
+        ]
+        return IVPercept(
+            bug_id=b.bug_id,
+            step=len(self.history),
+            position=b.position,
+            left=left,
+            right=right,
+            stock_here=self._stock_for(b, b.position),
+            stock_left=self._stock_for(b, left),
+            stock_right=self._stock_for(b, right),
+            condition_here=self.places[b.position].condition,
+            stored=b.stored,
+            repro_threshold=self.cfg.repro_threshold,
+            crowded=any(other.position == b.position for other in local_others),
+            opposite_left=any(
+                other.position == left and other.producer != b.producer
+                for other in local_others
+            ),
+            opposite_right=any(
+                other.position == right and other.producer != b.producer
+                for other in local_others
+            ),
+            n_opposite=sum(
+                other.producer != b.producer for other in local_others
+            ),
+        )
+
+    def _controller_intent(self, b: Bug, living: List[Bug]) -> IVIntent:
+        if self.controller is None:
+            return IVIntent()
+        percept = self._controller_percept(b, living)
+        intent = self.controller.decide(percept)
+        if not isinstance(intent, IVIntent):
+            raise TypeError("controller.decide must return IVIntent")
+        if intent.movement is MovementMode.TARGET:
+            reachable = {percept.left, percept.position, percept.right}
+            if intent.target_position not in reachable:
+                raise ValueError(
+                    "controller target must be the current, left, or right place"
+                )
+        return intent
+
     def snapshot_ring(self) -> str:
         """One-line picture of the ring: P/R plus condition sign."""
         n = self.cfg.n_places
@@ -260,6 +336,11 @@ class MetabolicSim:
             b = living[int(idx)]
             if not b.alive:
                 continue
+            intent = (
+                self._controller_intent(b, living)
+                if self.controller is not None
+                else None
+            )
             if b.stored < 1:
                 b.alive = False
                 deaths += 1
@@ -267,10 +348,17 @@ class MetabolicSim:
             b.stored -= 1
             self._excrete(b.position, b.producer, 1)
 
+            if intent is not None and intent.movement is MovementMode.TARGET:
+                # Reachability was checked before maintenance changed matter.
+                b.position = int(intent.target_position)
+
             want = cfg.harvest + self._yield_bonus(b)
             want = max(1, want)
             got = self._take(b.position, b.producer, want)
-            if got == 0:
+            default_movement = (
+                intent is None or intent.movement is MovementMode.DEFAULT
+            )
+            if got == 0 and default_movement:
                 left = (b.position - 1) % cfg.n_places
                 right = (b.position + 1) % cfg.n_places
 
@@ -303,17 +391,25 @@ class MetabolicSim:
                 if excreted > 0:
                     self._excrete(b.position, b.producer, excreted)
 
-            self._construct(b)
+            if intent is None or intent.construct:
+                self._construct(b)
 
+            repro_threshold = (
+                cfg.repro_threshold
+                if intent is None or intent.repro_threshold is None
+                else intent.repro_threshold
+            )
             if (
-                b.stored >= cfg.repro_threshold
+                (intent is None or intent.reproduce)
+                and b.stored >= repro_threshold
                 and len(living) + len(newborns) < cfg.max_organisms
             ):
                 child_prod = b.producer
                 child_taste = b.taste
                 child_construct = b.construct
                 tag = b.genome_tag
-                if self.rng.random() < cfg.mut_prob:
+                legacy_mutation_roll = self.rng.random()
+                if self.controller is None and legacy_mutation_roll < cfg.mut_prob:
                     flip = int(self.rng.integers(0, 3))
                     if flip == 0:
                         child_prod = not child_prod
@@ -322,9 +418,30 @@ class MetabolicSim:
                     else:
                         child_construct = int(self.rng.integers(-1, 2))
                     tag = (tag + int(self.rng.integers(1, 4))) % 16
+                child_id = self._next + 1
+                if self.controller is not None:
+                    traits = self.controller.offspring_traits(
+                        b.bug_id,
+                        child_id,
+                        IVTraits(
+                            producer=child_prod,
+                            taste=child_taste,
+                            construct=child_construct,
+                        ),
+                    )
+                    if not isinstance(traits, IVTraits):
+                        raise TypeError(
+                            "controller.offspring_traits must return IVTraits"
+                        )
+                    child_prod = traits.producer
+                    child_taste = traits.taste
+                    child_construct = traits.construct
                 dowry = b.stored // 2
                 b.stored -= dowry
                 shift = 1 if self.rng.random() < 0.5 else -1
+                assigned_id = self._id()
+                if assigned_id != child_id:
+                    raise RuntimeError("controller child ID reservation drifted")
                 newborns.append(
                     Bug(
                         position=(b.position + shift) % cfg.n_places,
@@ -334,7 +451,7 @@ class MetabolicSim:
                         construct=child_construct,
                         genome_tag=tag,
                         parent=b.bug_id,
-                        bug_id=self._id(),
+                        bug_id=assigned_id,
                     )
                 )
                 births += 1
@@ -383,7 +500,7 @@ class MetabolicSim:
                     f"P/R={row.n_producers}/{row.n_recyclers}  "
                     f"N/W/body={row.nutrient}/{row.waste}/{row.stored}  "
                     f"conserved={row.nutrient + row.waste + row.stored}  "
-                    f"niche={row.niche_index:.2f}  "
+                    f"cross-contact={row.niche_index:.2f}  "
                     f"c-match={row.construct_match:.2f}  "
                     f"c-var={row.condition_var:.2f}"
                 )

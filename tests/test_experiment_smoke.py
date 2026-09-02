@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "experiments"))
 
 import run_amenability
+import run_language_iv
 import run_quiet_noisy
 import run_unused
 
@@ -55,6 +56,18 @@ class ExperimentSmokeTests(unittest.TestCase):
         self.assertIn("repeated_actions_late", result)
         self.assertIn("n_genotype_signatures_final", result)
         self.assertIn("chips_in_bodies_late", result)
+
+    def test_iv_typed_controller_pilot_runs_both_arms(self) -> None:
+        with patch.object(run_language_iv, "STEPS", 8):
+            native = run_language_iv.run_one(seed=73, controlled=False)
+            controlled = run_language_iv.run_one(seed=73, controlled=True)
+
+        self.assertTrue(native["conservation_ok"])
+        self.assertTrue(controlled["conservation_ok"])
+        self.assertEqual(native["arm"], "native")
+        self.assertEqual(controlled["arm"], "typed-controller")
+        self.assertEqual(native["n_executable_programs"], 0)
+        self.assertGreater(controlled["n_executable_programs"], 0)
 
 
 if __name__ == "__main__":
