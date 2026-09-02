@@ -2,8 +2,10 @@
 
 > **Pre-audit document.** This page contains historical overclaims and
 > reconstruction choices that are not yet source-traceable. Do not treat it as
-> the current fidelity statement. See the README's reviewed-baseline and
-> fidelity sections; a page-level rewrite of this document is a pending repair.
+> the current fidelity statement. See the README's
+> [current repair status](../README.md#current-repair-status) and
+> [fidelity matrix](../README.md#fidelity-matrix); a page-level rewrite of this
+> document is a pending repair.
 
 Source paper:
 

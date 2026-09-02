@@ -3,8 +3,9 @@
 > **Pre-audit document.** This timeline contains unresolved attributions,
 > historical errors, and reconstruction claims that are being corrected. Do
 > not treat it as the current evidence statement. See the README's
-> reviewed-baseline and fidelity sections; a source-by-source rewrite is a
-> pending repair.
+> [current repair status](../README.md#current-repair-status) and
+> [fidelity matrix](../README.md#fidelity-matrix); a source-by-source rewrite is
+> a pending repair.
 
 One research program, four numbered models, twenty-nine years.
 The invariant is the sentence from 1970: do not impose a fitness
@@ -20,7 +21,7 @@ to be.
 1989  "artificial worlds" the method gets a name
 1992  Tierra (sideways)   CPU time as the conserved resource
 1998  EVOLVE IV           metabolites + niche construction
-2004  —                   Conrad dies. There is no V.
+after IV                  no EVOLVE V publication identified in this audit
 2026  this repo           same refusal, language as a mutator
 ```
 
@@ -139,8 +140,8 @@ another type can live on?”
 
 They report that niche formation occurs.
 
-There is no EVOLVE V in the published record. Conrad died in
-2004. IV is the last numbered episode.
+No EVOLVE V publication has been identified in this audit; IV is the last
+numbered episode currently documented here.
 
 `src/evolve4` reconstructs both published interactions: two
 conserved metabolites on the 1970 ring, plus a signed condition

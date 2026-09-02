@@ -8,7 +8,7 @@ This project revisits Conrad and Pattee's 1970 artificial ecosystem: a closed wo
 >
 > This is not a line-by-line port. We have not located the original program or a complete executable specification. In this repository, **Historical** means supported by a cited primary source, **Reconstruction** means a documented implementation choice, and **Extension** means a new experiment. The current code is a promising mechanism-inspired prototype; a source-faithful 1970 mode is still in progress.
 
-[Conrad & Pattee (1970)](https://doi.org/10.1016/0022-5193(70)90077-9) · [EVOLVE IV](https://link.springer.com/chapter/10.1007/BFb0040799) · [Reviewed baseline](#reviewed-baseline-9290a7f) · [2026 research program](#the-2026-laboratory)
+[Conrad & Pattee (1970)](https://doi.org/10.1016/0022-5193(70)90077-9) · [EVOLVE IV](https://link.springer.com/chapter/10.1007/BFb0040799) · [Repair status](#current-repair-status) · [2026 research program](#the-2026-laboratory)
 
 ## The idea
 
@@ -22,7 +22,7 @@ That premise is still unusually relevant. It gives us a clean way to ask whether
 
 ## Target architecture: museum layer, laboratory layer
 
-The repair plan will keep provenance visible by separating two kinds of work. The reviewed baseline does not yet enforce this boundary: later modifier machinery is still embedded in `evolve1970`.
+The repair plan will keep provenance visible by separating two kinds of work. The reviewed baseline does not yet enforce this boundary: an opt-in later-style modifier still lives inside `evolve1970` rather than in a laboratory namespace.
 
 | Layer | Purpose | Rule |
 |---|---|---|
@@ -38,22 +38,22 @@ flowchart TD
     L --> V["GP and semantic variation"]
 ```
 
-## Reviewed baseline: 9290a7f
+## Current repair status
 
-Status below refers to commit [`9290a7f`](https://github.com/ReloadLightly/artificial-ecosystems/tree/9290a7fae9d238ef7a015059baa0668fbf07f6ba). It is intentionally explicit so planned work cannot be mistaken for a result.
+The audit began at [`9290a7f`](https://github.com/ReloadLightly/artificial-ecosystems/tree/9290a7fae9d238ef7a015059baa0668fbf07f6ba). The table distinguishes working diagnostics from historical replications so planned work cannot be mistaken for a result.
 
 | Track | Execution status | Defensible interpretation |
 |---|---|---|
 | Conserved-chip core | **Runs** | A compact, deterministic reconstruction; chip conservation holds in tested runs |
 | Quiet versus noisy worlds | **Runs** | Matching differs between treatments; the historical System I/System III pattern is not yet reproduced faithfully |
-| Unused sequence experiment | **Broken; proxy inadequate** | Does not yet measure unexecuted encoded positions |
-| Amenability experiment | **Broken; custom extension** | An EVOLVE-inspired modifier experiment, not a historical replication |
+| Repetition/execution experiment | **Runs; repaired diagnostic** | Separates repeated actions from indexed program positions; does not yet establish neutral historical sequence |
+| Mutation-control experiment | **Runs; explicit extension** | Later-style modifier mode is opt-in and descriptive, not evidence of canalization |
 | EVOLVE IV-inspired metabolism | **Runs** | A useful construction ablation; the present contact statistic does not by itself establish nonrandom niche formation |
 | Text policies on the conserved-chip prototype | **Runs** | A deterministic keyword interpreter with a hand-written string mutator—not an LLM experiment |
 | Text policies on IV physics | **Broken integration** | Intended hooks exist, but the simulation does not execute or inherit policies |
 | Real-model variation | **Unintegrated wrapper only** | No working simulation invokes a real-model mutator end to end |
 
-Six of the ten commands advertised in the previous README execute at this commit. Four fail, so their reported tables should be treated as unverified until the integrations and metrics are repaired and regenerated.
+Eight of the ten commands advertised in the original README now execute. The two IV-language commands remain broken and their reported tables remain withdrawn.
 
 ## Quick start
 
@@ -66,6 +66,8 @@ python3 -m pip install -r requirements.txt
 
 PYTHONPATH=src python3 -m evolve1970
 PYTHONPATH=src python3 experiments/run_quiet_noisy.py
+PYTHONPATH=src python3 experiments/run_unused.py
+PYTHONPATH=src python3 experiments/run_amenability.py
 PYTHONPATH=src python3 -m evolve4
 PYTHONPATH=src python3 experiments/run_niches.py
 ```
@@ -76,7 +78,7 @@ The conserved total is the most important invariant:
 chips[place/body/pool] = ...   conserved = 4000
 ```
 
-If it drifts, the simulated world is broken. Canonical runs should eventually enforce this after every step, not only at the beginning and end.
+If it drifts, the simulated world is broken. Tests now verify every step in both ordinary and modifier modes; production runs still need an always-on per-step assertion rather than boundary-only checks and printed totals.
 
 ## What the 1970 paper actually specifies
 
@@ -104,7 +106,7 @@ Reproduction follows automatically when an organism doubles its material size; i
 | Resource allocation | Marks compete for place chips by integer division | Fixed harvest amount with a matching bonus | **Reconstruct** |
 | Death and detritus | Spatial return associated with phenome positions | Global matter pool followed by random rain | **Reconstruct** |
 | Sexuality and symbiosis | Evolvable recognition codes | Fixed global recombination probability; generic cooperation | **Missing** |
-| Later EVOLVE modifiers | Separate later experiments | Always encoded in the final pair of `evolve1970` genomes | **Separate from 1970 mode** |
+| Later EVOLVE modifiers | Separate later experiments | Opt-in via `modifier_enabled`; ordinary runs execute every complete pair | **Boundary repaired; historical semantics remain exploratory** |
 
 The appropriate claim today is **source-transparent conceptual reconstruction**, not “faithful recreation.” The latter becomes defensible when the historical mode, ambiguity register, tests, and reference results agree with the primary sources.
 
@@ -202,14 +204,15 @@ The minimum release bar is:
 | [`src/evolve4`](src/evolve4) | EVOLVE IV-inspired two-metabolite world |
 | [`src/evolve_modern`](src/evolve_modern) | Text-policy experiments and mutator adapters |
 | [`experiments`](experiments) | Runnable comparisons |
-| [`docs/original-model.md`](docs/original-model.md) | Published details versus reconstruction choices |
-| [`docs/evolve-family.md`](docs/evolve-family.md) | Historical context across the EVOLVE family |
+| [`docs/original-model.md`](docs/original-model.md) | Quarantined pre-audit note; not the current fidelity statement |
+| [`docs/evolve-family.md`](docs/evolve-family.md) | Quarantined pre-audit timeline; source-by-source repair pending |
 
 Each experiment page should follow the same evidence template: primary-source claim; research question; operationalization; reconstruction deviations; hypothesis and null; configuration and seeds; artifact-generated results with uncertainty; robustness checks; narrow interpretation; limitations; exact reproduction command.
 
 ## Roadmap
 
-- [ ] **P0 — Repair the evidence surface:** fix or remove four broken entry points, withdraw ungenerated tables, correct metric names and factual errors.
+- [x] **P0 — Repair historical diagnostics:** separate repetition from execution coverage and make the later mutation-control modifier explicit.
+- [ ] **P0 — Finish the evidence surface:** integrate or de-advertise IV-language, keep its old tables withdrawn, and finish factual corrections in legacy pages.
 - [ ] **P0 — Add the trust layer:** tests, CI, packaging, lock file, manifests, raw reference results, and documentation generated from artifacts.
 - [ ] **P1 — Build strict 1970 mode:** A–F phenome, mark/resolve semantics, local detritus, automatic reproduction, recognition codes, and separate System I/III configurations.
 - [ ] **P1 — Re-test EVOLVE IV:** flux provenance, spatial nulls, density controls, and partner-removal knockouts.

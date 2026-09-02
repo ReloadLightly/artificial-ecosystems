@@ -1,87 +1,71 @@
-# Language as a mutator, on EVOLVE IV physics
+# Language-guided variation on EVOLVE IV-inspired physics
 
-The 1970 overlay in `evolve_modern` writes policies over the six
-Conrad primitives. This page is the same stance on the *last*
-numbered world: metabolites, construction, no fitness function.
+> **Status: withdrawn integration design.** The IV-language experiment is not
+> executable. Both previously advertised commands fail because
+> `MetabolicConfig` has no `language` option, and the simulator has no complete
+> policy execution, inheritance, or mutation path. The former numerical table
+> and empirical interpretation have been removed because they were not results
+> of the current engine.
 
-The model is asked only at birth. The interpreter never calls it.
+## What exists
 
-## Split
+The repository contains useful but disconnected scaffolding:
 
-| layer | lives in | may do | may not do |
-|---|---|---|---|
-| physics | `src/evolve4` | convert N↔W, push condition, die, conserve | score anyone |
-| compiler | `src/evolve_modern/iv_policies.py` | read role / taste / construct from English; pick a neighbour, withhold digging, shift the fission threshold | invent matter |
-| mutator | same file, or your API | rewrite the child's policy | judge the parent |
+- `src/evolve4` implements a two-metabolite, construction-capable world inspired
+  by EVOLVE IV;
+- `src/evolve_modern/iv_policies.py` contains text-policy parsing and heuristic
+  mutation helpers; and
+- `src/evolve_modern/iv.py` sketches how the two layers might be attached.
 
-`Intent` is the only thing the text is allowed to change in a step.
-Metabolism, excretion, death, and the conservation check run
-afterward, identically for a bit-string bug and a language bug.
+That is design material, not an integrated experiment. IV organisms do not
+currently store a policy, the step loop does not ask a policy for an action,
+newborns do not inherit or mutate policies, and no working run invokes a real
+model.
 
-## How a policy compiles
+## Intended separation
 
-```
-"I am a recycler. Eat waste. Lower the ground; I prefer acid.
- Seek a producer neighbour. Reproduce only when rich."
-```
+| Layer | Responsibility | Constraint |
+|---|---|---|
+| Physics | Metabolism, movement, construction, fission, death, conservation | Never delegate matter accounting to text or a model |
+| Controller | Convert a typed local percept into a typed intent | Deterministic and replayable for a fixed program |
+| Variation operator | Propose a child controller at reproduction | Never score or select organisms |
+| Experiment harness | Match budgets, cache proposals, record provenance | Compare operators in the same ecological world |
 
-- `compile_traits` → recycler, taste −1, construct −1
-- `interpret_iv_policy` + a local percept → stand next to a
-  producer if one is adjacent, do not fission until stored is
-  six above the default, keep digging
+The research question is not whether fluent text can control a bug. It is
+whether semantic variation changes evolvability while ecological persistence
+remains the only selector.
 
-Unmentioned traits inherit from the parent. That is the IV analog
-of a modifier section: the sentence you do not write is not
-re-rolled.
+## Repair design
 
-## Offline mutator, and how to plug in a model
+A safe integration should introduce explicit types such as `IVPercept`,
+`IVIntent`, `IVTraits`, and `IVController`. Movement needs a tri-state intent
+(`default`, `stay`, or a validated target) so omission cannot accidentally mean
+an action. Controllers should live in a registry keyed by organism ID until the
+physics model has a deliberate controller field and inheritance contract.
 
-Default is `heuristic_mutate_iv_policy`: append, swap, or replace
-a clause. No network.
+The first executable controller format should be a small typed DSL or JSON AST,
+not substring matching over unrestricted English. That gives grammar-preserving
+mutation, validation, serialization, and deterministic replay a common target.
+Language models can later propose typed rewrites that pass the same parser and
+validator as every other operator.
 
-To use a real model, wrap any `prompt → text` callable:
+Randomness for scheduling, physics, reproduction, controller mutation, and any
+model sampling should be separated. A no-controller golden trace must remain
+unchanged when the integration is disabled.
 
-```python
-from evolve_modern.iv import attach_language
-from evolve_modern.iv_policies import make_llm_mutator
+## Evidence bar before re-advertising commands
 
-def complete(prompt: str) -> str:
-    # your API
-    return client.chat(...)
+1. The ordinary EVOLVE IV-inspired run is unchanged with controllers disabled.
+2. A fixed controller produces a deterministic, unit-tested intent.
+3. Intent changes the intended action without bypassing metabolism or
+   conservation.
+4. Every newborn receives the specified inherited or mutated controller.
+5. Fixed seeds replay identical trajectories with cached model responses.
+6. All documented commands have smoke tests.
+7. Bit, GP, random-edit, and model-assisted treatments use matched proposal and
+   edit-size budgets.
+8. Results are generated from raw artifacts with failure rates and uncertainty,
+   not copied into this page by hand.
 
-sim = MetabolicSim(MetabolicConfig(language=True, ...))
-attach_language(sim, mutator=make_llm_mutator(complete))
-```
-
-Keep the interpreter deterministic. Two labs with the same seed
-and the same child policies should replay each other.
-
-## What we ran
-
-```bash
-PYTHONPATH=src python3 -m evolve_modern.iv
-PYTHONPATH=src python3 experiments/run_language_iv.py
-```
-
-Sparse IV world (96 places, cap 90), four seeds, 200 steps.
-Construction on. Language off versus on.
-
-| | bits | language |
-|---|---:|---:|
-| producers late | 44.3 | 43.8 |
-| recyclers late | 43.0 | 43.6 |
-| niche late | 0.86 | **0.89** |
-| construct-match late | 0.36 | **0.57** |
-| distinct policies | — | 63.5 |
-| conserved | yes | yes |
-
-Both metabolic types persist. Niches still form. The new fact is
-construct-match: in the bit world taste and construct mutate as
-independent flips, so “build what I like” is an accident. In the
-language world they are usually *the same sentence*, so they
-hitchhike. That is not a fitness trick. It is a fact about how
-English packages traits.
-
-Surviving policies drift. Some stay long and specific. Some
-collapse to a clause (“Prefer alkali.”). Role is then inherited,
-the same way an unused codon hitchhiked in 1970.
+Until those conditions hold, this page is a roadmap and the IV-language result
+claim remains withdrawn.

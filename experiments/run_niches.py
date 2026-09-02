@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""EVOLVE IV — metabolite exchange vs exchange + niche construction.
+"""EVOLVE IV-inspired exchange and construction diagnostic.
 
-Two densities. On a packed ring everyone already has an opposite
-neighbour, so the metabolic-niche index saturates. On a sparse ring
-there is room not to sort — and construction is what makes them sort.
+The reported cross-type contact rate is a raw density-sensitive statistic,
+not evidence of above-random niche formation.
 """
 
 from __future__ import annotations
@@ -50,8 +49,10 @@ def run_one(seed: int, construction: bool, world: str) -> dict:
         "conservation_ok": start == end == 4000,
         "producers_late": window_mean(h, "n_producers", len(h) - 40, len(h)),
         "recyclers_late": window_mean(h, "n_recyclers", len(h) - 40, len(h)),
-        "niche_early": window_mean(h, "niche_index", 0, 30),
-        "niche_late": window_mean(h, "niche_index", len(h) - 40, len(h)),
+        "cross_type_contact_early": window_mean(h, "niche_index", 0, 30),
+        "cross_type_contact_late": window_mean(
+            h, "niche_index", len(h) - 40, len(h)
+        ),
         "cmatch_late": window_mean(h, "construct_match", len(h) - 40, len(h)),
         "cvar_late": window_mean(h, "condition_var", len(h) - 40, len(h)),
         "alive_final": last.n_alive,
@@ -68,8 +69,8 @@ def block(label: str, rows: list[dict]) -> None:
     for name, key in [
         ("producers late", "producers_late"),
         ("recyclers late", "recyclers_late"),
-        ("niche early", "niche_early"),
-        ("niche late", "niche_late"),
+        ("cross-type contact early", "cross_type_contact_early"),
+        ("cross-type contact late", "cross_type_contact_late"),
         ("construct-match late", "cmatch_late"),
         ("condition var late", "cvar_late"),
         ("alive final", "alive_final"),
@@ -91,9 +92,10 @@ def main() -> None:
     block("sparse / exchange only", results["sparse_flat"])
     block("sparse / exchange + construction", results["sparse_construct"])
     print()
-    print("On a packed ring the metabolic-niche index saturates either way.")
-    print("On a sparse ring construction is what sorts producers next to")
-    print("recyclers — the 1999 claim, in miniature.")
+    print("The raw contact rate saturates on the packed ring.")
+    print("Construction raises raw cross-type contact on the sparse ring,")
+    print("but no density-aware spatial null is implemented here.")
+    print("This diagnostic therefore does not establish niche formation.")
 
 
 if __name__ == "__main__":

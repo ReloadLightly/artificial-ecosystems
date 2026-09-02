@@ -1,78 +1,78 @@
-# Unused phenome sequences
+# Program repetition and execution coverage
 
-Conrad and Pattee’s fifth qualitative result:
+Conrad and Pattee reported that some successful organisms carried phenome
+sequences that were not executed. That observation is historically important:
+it asks whether an evolving system can retain encoded material that is not
+expressed under the conditions it encounters.
 
-> Dominant organisms often carried phenome sequences that were never
-> executed — sequence of no selective value.
+The present simulator does **not** yet implement the original A–F phenome and
+its conditional, parametric execution semantics. This experiment is therefore
+a diagnostic of the current cyclic controller, not a reproduction of the 1970
+result.
 
-This is the junk-DNA observation, twenty years before anyone called it
-that.
+## What is measured
 
-## What “unused” means here
+The repaired experiment keeps two questions separate.
 
-The genome decodes into a short cyclic program over six primitives.
-Two different kinds of unused tape are logged.
+### Repeated action fraction
 
-**Structural unused.** Slots that only repeat an action already on the
-tape. A program `forage, forage, repair` is one-third structural unused.
-The second `forage` does not add a phenome symbol.
+`repeated_action_fraction` is
 
-**Dynamic unused.** Unique encoded actions that never fired during that
-organism’s life. An organism that carries `cooperate` but never meets a
-neighbour has dynamic unused tape.
+```text
+1 - number of distinct action symbols / number of program slots
+```
 
-Random genomes of typical seed length already have about 0.28
-structural unused. The question is whether selection *cleans* the tape
-or whether the extra slots ride along with winners.
+For example, `forage, forage, repair` has a repeated-action fraction of
+one-third. This measures symbol repetition only. A repeated slot is not
+necessarily redundant: in a cyclic controller it can change action frequency,
+phase, internal-state transitions, and downstream behaviour. The metric must
+therefore not be described as an "unused" or selectively neutral fraction.
 
-## What we ran
+### Position-level execution coverage
+
+`mean_unexecuted_slot_fraction` measures decoded **positions** that were not
+selected during the observation period. Positions are tracked separately even
+when they encode the same action. This corrects the former implementation,
+which remembered only which action types had fired and could not distinguish
+two occurrences of `forage`.
+
+Execution coverage remains exposure-dependent. A young organism, or one
+observed for only a few steps, has had fewer opportunities to visit its whole
+program. Results should therefore report the age or observation-window rule
+and should not equate an unvisited slot with a functionless slot.
+
+## Run the diagnostic
 
 ```bash
 PYTHONPATH=src python3 experiments/run_unused.py
 ```
 
-Four seeds, 280 steps, quiet world, 4000 chips. Conservation held.
+The command uses the repository's fixed-seed diagnostic configuration and
+checks chip conservation. Its opening JSON block reports
+`repeated_action_fraction` and `mean_unexecuted_slot_fraction`. No canonical
+numerical result is published here until the repaired metric has been tested
+and the result bundle can be regenerated from a recorded revision and
+environment.
 
-| metric | early | late |
-|---|---:|---:|
-| structural unused | 0.264 | **0.313** |
-| dynamic unused | 0.141 | 0.061 |
-| rich structural | 0.298 | **0.350** |
-| poor structural | 0.236 | 0.254 |
-| mean genome length | 11.7 | 10.7 |
+## Questions this diagnostic can answer
 
-Final snapshot: structural unused is 0.337 in the richest quartile and
-0.263 in the poorest. The largest lineage sits at 0.317. Dynamic unused
-among organisms that lived at least five steps is 0.057.
+- Does action-symbol repetition change between predefined early and late
+  windows in this implementation?
+- How much of each program has actually been visited after controlling for
+  organism age and program length?
+- Do observed repetition levels differ from length-matched random programs?
+- Are any differences robust across seeds rather than driven by one population?
 
-Richest organism in each seed:
+Stored-chip strata may be reported as exploratory descriptions, but they are
+not independent samples and should not be called "winners" and "losers."
+Lineage-aware or population-level uncertainty is needed for comparisons.
 
-- 1970 — `forage forage repair` — fired forage, repair
-- 1971 — `repair cooperate forage collect forage repair` — fired forage, repair
-- 1985 — `forage collect forage` — fired collect, forage
-- 2026 — `collect repair wait forage forage` — fired collect, forage, repair, wait
+## What would support the historical claim
 
-## How to read it
-
-The tape gets *messier*, not cleaner, among the organisms that hold the
-chips. Dynamic unused falls: winners do fire the distinct actions they
-bother to encode. Structural unused rises and is higher in the rich
-quartile than in the poor one. The extra slots are copies of an action
-that already works — usually `forage`.
-
-That is hitchhiking. A second `forage` codon is nearly invisible to
-selection. It costs a little metabolism (genome length) and does no
-new work, so it is “of no selective value” in Conrad’s sentence. It
-is also not costly enough to be purged, so it travels with the lineage
-that found a paying routine.
-
-The last codon pair is now a modifier section and is not executed
-(see amenability). Structural unused is measured on the critical
-section only. The observation survives that split.
-
-## What this is not
-
-It is not a claim that longer genomes win. Mean length fell. It is a
-claim about *composition*: the remaining tape of successful organisms
-is more repetitive than the tape of unsuccessful ones, and more
-repetitive than a random draw.
+A source-faithful test requires the original-style phenome semantics, including
+conditional branches, followed by position-level traces across each
+organism's life. A stronger test would also intervene on an unexecuted segment:
+delete or replace it and show that behaviour and reproductive persistence are
+unchanged in the relevant environments. Until those pieces exist, this page
+documents a controller diagnostic rather than evidence for neutral sequence,
+hitchhiking, or an analogy to noncoding DNA.
