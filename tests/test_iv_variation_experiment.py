@@ -190,6 +190,11 @@ class IVVariationExperimentTests(unittest.TestCase):
             events = read_jsonl(first / "events.jsonl")
             summary = json.loads((first / "summary.json").read_text())
             manifest = json.loads((first / "manifest.json").read_text())
+            self.assertEqual(manifest["source_commit"], RUNNER.source_commit())
+            self.assertEqual(
+                manifest["source_commit_scope"],
+                "latest commit touching a path in source_files_sha256",
+            )
             self.assertEqual(
                 set(manifest["source_files_sha256"]),
                 set(RUNNER.SOURCE_FILES),

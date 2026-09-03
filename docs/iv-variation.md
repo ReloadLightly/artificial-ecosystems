@@ -186,7 +186,7 @@ directory.
 
 | Artifact | Contents |
 |---|---|
-| `manifest.json` | Source revision and critical-source checksums, Python/NumPy versions, input checksums, full seed plans, arm IDs, matching contract, and limitations |
+| `manifest.json` | Latest critical-source revision and per-source checksums, Python/NumPy versions, input checksums, full seed plans, arm IDs, matching contract, and limitations |
 | `runs.jsonl` | One row per seed and arm, initial/final fingerprints, RNG-state hash, budget use, births/deaths, occupancy/coexistence/turnover summaries, final living matter, and program richness |
 | `trajectories.jsonl` | Per-step population, material, construction/contact diagnostics, proposal spend, program richness, and invariant checks |
 | `events.jsonl` | Seed and birth records with parent/child programs, proposal status and provenance, event seed, donor/cache identity, typed delta, and exact-parent fallback |

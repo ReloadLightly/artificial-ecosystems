@@ -200,9 +200,10 @@ def make_physics(config: Mapping[str, object], seed: int) -> MetabolicConfig:
 
 
 def source_commit() -> str:
+    """Return the latest commit affecting the critical replay sources."""
     try:
         return subprocess.run(
-            ["git", "rev-parse", "HEAD"],
+            ["git", "log", "-1", "--format=%H", "--", *SOURCE_FILES],
             cwd=ROOT,
             check=True,
             capture_output=True,
@@ -606,6 +607,9 @@ def build_manifest(
         "experiment_id": config["experiment_id"],
         "claim_status": config["claim_status"],
         "source_commit": source_commit(),
+        "source_commit_scope": (
+            "latest commit touching a path in source_files_sha256"
+        ),
         "source_files_sha256": {
             name: sha256_bytes((ROOT / name).read_bytes()) for name in SOURCE_FILES
         },
