@@ -143,6 +143,11 @@ but the pilot runner is intentionally fixed to the fixture profile. Authentic
 model responses belong in a new versioned treatment with a frozen collection
 protocol. Ecosystem replay should remain offline.
 
+For inspection without running anything, the repository retains the exact
+[fixture cache](../experiments/cache/iv-variation-fixture-v1.jsonl) and the
+[six-file reference bundle](../results/reference/iv-variation-pilot-v1). Its
+manifest identifies the committed source used to generate it.
+
 ## Run and replay
 
 Both the fixture path and output directory must be new; the runner refuses to

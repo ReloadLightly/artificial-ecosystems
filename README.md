@@ -90,7 +90,10 @@ PYTHONPATH=src python3 experiments/run_iv_variation.py \
 ```
 
 This four-seed run is a protocol and deterministic-replay check, not a
-statistical comparison. See [the matched IV variation protocol](docs/iv-variation.md).
+statistical comparison. The repository also retains the
+[synthetic fixture](experiments/cache/iv-variation-fixture-v1.jsonl) and its
+[reference result bundle](results/reference/iv-variation-pilot-v1). See
+[the matched IV variation protocol](docs/iv-variation.md).
 
 The conserved total is the most important invariant:
 
@@ -264,7 +267,7 @@ Each experiment page should follow the same evidence template: primary-source cl
 - [x] **P0 — Repair the IV controller boundary:** preserve controller-off physics, add typed intents and programs, isolate controller randomness, and restore both commands as integration pilots.
 - [x] **P2 — Build the matched IV variation pilot:** identical starts, named streams, five arms, an exact proposal budget, fail-closed fixture replay, and deterministic artifacts.
 - [ ] **P0 — Finish the evidence surface:** keep the old IV-language table withdrawn and finish factual corrections in quarantined legacy pages.
-- [ ] **P0 — Add the trust layer:** tests, CI, packaging, lock file, manifests, raw reference results, and documentation generated from artifacts.
+- [ ] **P0 — Finish the trust layer:** add CI, packaging, a lock file, and automated validation of committed result bundles.
 - [ ] **P1 — Build strict 1970 mode:** A–F phenome, mark/resolve semantics, local detritus, automatic reproduction, recognition codes, and separate System I/III configurations.
 - [ ] **P1 — Re-test EVOLVE IV:** flux provenance, spatial nulls, density controls, and partner-removal knockouts.
 - [ ] **P2 — Run an inferential operator study:** preregistered estimands, adequate independent replicates, robustness checks, and ecological selection only.

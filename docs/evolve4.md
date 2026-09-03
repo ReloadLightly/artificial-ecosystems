@@ -74,8 +74,9 @@ PYTHONPATH=src python3 experiments/run_language_iv.py
 The construction experiment compares dense and sparse rings with construction
 enabled or disabled over four fixed seeds. The controller commands are separate
 integration pilots and do not make a language-model or operator-comparison
-claim. The separate matched-variation runner now writes such a bundle, but its
-cached arm is a synthetic replay fixture and its four-seed configuration remains
+claim. The separate matched-variation runner now writes such a bundle, and one
+[reference replay](../results/reference/iv-variation-pilot-v1) is retained. Its
+cached arm is a synthetic fixture and its four-seed configuration remains
 non-inferential. All check conserved matter. No numerical table is canonical
 until it is generated from a recorded result bundle with revision, environment,
 configuration, seeds, trajectories, and checksums.
