@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "experiment_id": "iv-variation-pilot-v1",
+  "claim_status": "exploratory_integration_replay_pilot",
+  "arms": [
+    "inherit_only",
+    "typed_point_v1",
+    "random_atomic_edit_v1",
+    "typed_homologous_recombination_v1",
+    "cached_proposal_fixture_v1"
+  ],
+  "seeds": [1970, 1998, 2026, 7301],
+  "proposal_budget": 8,
+  "require_full_budget": true,
+  "physics": {
+    "n_places": 24,
+    "total_units": 800,
+    "n_organisms": 16,
+    "max_organisms": 40,
+    "steps": 64,
+    "harvest": 4,
+    "convert_yield": 3,
+    "excrete": 2,
+    "repro_threshold": 14,
+    "mut_prob": 0.0,
+    "construction": true,
+    "condition_decay": 0.18,
+    "verbose_every": 0
+  },
+  "initial_programs": [
+    "{\"construction\":\"always\",\"movement\":\"seek_opposite\",\"reproduce_at\":14,\"require_uncrowded\":false,\"schema\":1,\"traits\":{\"construct\":1,\"role\":\"producer\",\"taste\":1}}",
+    "{\"construction\":\"always\",\"movement\":\"seek_opposite\",\"reproduce_at\":20,\"require_uncrowded\":false,\"schema\":1,\"traits\":{\"construct\":-1,\"role\":\"recycler\",\"taste\":-1}}",
+    "{\"construction\":\"never\",\"movement\":\"default\",\"reproduce_at\":10,\"require_uncrowded\":false,\"schema\":1,\"traits\":{\"construct\":0,\"role\":\"producer\",\"taste\":1}}",
+    "{\"construction\":\"always\",\"movement\":\"seek_resource\",\"reproduce_at\":20,\"require_uncrowded\":false,\"schema\":1,\"traits\":{\"construct\":-1,\"role\":\"recycler\",\"taste\":-1}}",
+    "{\"construction\":\"until_nonzero\",\"movement\":\"stay_if_fed\",\"reproduce_at\":16,\"require_uncrowded\":false,\"schema\":1,\"traits\":{\"construct\":1,\"role\":\"producer\",\"taste\":1}}",
+    "{\"construction\":\"never\",\"movement\":\"seek_opposite\",\"reproduce_at\":10,\"require_uncrowded\":false,\"schema\":1,\"traits\":{\"construct\":0,\"role\":\"recycler\",\"taste\":-1}}",
+    "{\"construction\":\"always\",\"movement\":\"default\",\"reproduce_at\":14,\"require_uncrowded\":true,\"schema\":1,\"traits\":{\"construct\":-1,\"role\":\"producer\",\"taste\":-1}}",
+    "{\"construction\":\"until_nonzero\",\"movement\":\"stay_if_fed\",\"reproduce_at\":12,\"require_uncrowded\":false,\"schema\":1,\"traits\":{\"construct\":1,\"role\":\"recycler\",\"taste\":1}}"
+  ]
+}

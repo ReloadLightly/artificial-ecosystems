@@ -51,7 +51,8 @@ The audit began at [`9290a7f`](https://github.com/ReloadLightly/artificial-ecosy
 | EVOLVE IV-inspired metabolism | **Runs** | A useful construction ablation; the present contact statistic does not by itself establish nonrandom niche formation |
 | Text policies on the conserved-chip prototype | **Runs** | A deterministic keyword interpreter with a hand-written string mutator—not an LLM experiment |
 | Typed controllers on IV physics | **Runs; repaired integration pilot** | Strict JSON programs execute, inherit, and mutate through an ID-keyed registry with a separate RNG; this is not yet a language-model experiment |
-| Real-model variation | **Unintegrated wrapper only** | No working simulation invokes a real-model mutator end to end |
+| Matched IV variation | **Runs; replay/integration pilot** | Five arms share initial programs, physics, and named seeds; four variation arms share an exact budget while the inheritance control spends none; the cache is synthetic |
+| Real-model variation | **Offline contract only** | The cache schema can record model provenance, but no authentic model-response cache or live provider is integrated |
 
 All ten commands advertised in the original README now execute. The two repaired IV-controller commands are integration pilots, not evidence for the former language-treatment claims; their old table remains withdrawn.
 
@@ -74,13 +75,33 @@ PYTHONPATH=src python3 -m evolve_modern.iv
 PYTHONPATH=src python3 experiments/run_language_iv.py
 ```
 
+The matched IV pilot is deliberately offline. Build its deterministic fixture,
+then replay all five arms into a new output directory:
+
+```bash
+IV_PILOT_DIR="$(mktemp -d)"
+PYTHONPATH=src python3 experiments/run_iv_variation.py \
+  --config experiments/configs/iv-variation-pilot-v1.json \
+  --build-fixture-cache "$IV_PILOT_DIR/fixture.jsonl"
+PYTHONPATH=src python3 experiments/run_iv_variation.py \
+  --config experiments/configs/iv-variation-pilot-v1.json \
+  --cache "$IV_PILOT_DIR/fixture.jsonl" \
+  --output "$IV_PILOT_DIR/results"
+```
+
+This four-seed run is a protocol and deterministic-replay check, not a
+statistical comparison. See [the matched IV variation protocol](docs/iv-variation.md).
+
 The conserved total is the most important invariant:
 
 ```text
 chips[place/body/pool] = ...   conserved = 4000
 ```
 
-If it drifts, the simulated world is broken. Tests now verify every step in both ordinary and modifier modes; production runs still need an always-on per-step assertion rather than boundary-only checks and printed totals.
+If it drifts, the simulated world is broken. Tests now verify every step in both
+ordinary and modifier modes, and the matched IV runner enforces conservation
+and non-negativity after every step. Older production entry points still need
+the same always-on guard rather than boundary-only checks and printed totals.
 
 ## What the 1970 paper actually specifies
 
@@ -133,20 +154,44 @@ The modern experiment should not merely put a language model inside each organis
 
 ### Flagship experiment: matched variation operators
 
-All treatments should compile to the same small, typed controller language and run in the same physical world. Only the variation operator changes.
+The first matched pilot now holds the executable language, initial programs,
+physics, master seeds, and exact proposal budget fixed while changing the
+variation path. It includes an inheritance-only negative control.
 
-| Arm | Variation operator |
+| Arm ID | Implemented treatment |
 |---|---|
-| A | Point and size mutation |
-| B | Grammar-preserving subtree mutation and crossover |
-| C | Random valid-program edits matched for edit size |
-| D | LLM-assisted program rewrite followed by deterministic parsing and validation |
+| `inherit_only` | Exact parent inheritance; no proposal budget is spent |
+| `typed_point_v1` | Field-uniform typed point edit with a deterministic adjacent value |
+| `random_atomic_edit_v1` | Uniform draw from every valid one-atomic-edit neighbour |
+| `typed_homologous_recombination_v1` | Copy one atomic-compatible typed leaf from a living donor |
+| `cached_proposal_fixture_v1` | Replay integrity-checked synthetic proposals from an offline fixture |
 
-The comparison must match birth opportunities, proposal budgets, executable phenotype at initialization, and edit-size distributions. Ecological reproduction remains the only selector. The model is a source of structured variation—not a judge and not evidence of emergence by itself.
+Named streams provide matched initial conditions and common seeds for each
+mechanism. They are not permanent event-by-event common random numbers: after
+programs and ecological states diverge, stateful streams can consume different
+numbers of draws.
 
-Measure syntactic validity, offspring viability, descendant establishment, mutational robustness, reachable behavioral novelty, recovery after unseen environmental shocks, and **persistent causal innovation**. An innovation counts only if it persists through descendants and a knockout shows that it changes ecological function.
+Each budget unit permits one operator response and at most one candidate
+validation, with no retry or repair. Invalid, unchanged, multi-field,
+non-atomic, and recorded provider-failure responses consume one unit and
+inherit the exact parent. A cache miss or integrity mismatch stops the run. The
+schema-v1 program is a flat seven-leaf product, so homologous leaf
+recombination is **not subtree GP**.
 
-LLM outputs must be cached with model revision, prompt, decoding settings, parent/child program, organism and birth IDs, and raw response. Every resulting ecosystem should replay without another model call.
+The committed four-seed configuration is intentionally too small for rankings,
+p-values, confidence intervals, or superiority claims. It records proposal
+outcomes; normalized population-occupancy AUC; ceiling and role-coexistence
+fractions; extinction step; final living-body matter; turnover; program
+richness; raw ecological diagnostics; and per-step invariants. It does not yet
+measure general evolvability, offspring viability as a separate endpoint,
+descendant establishment, robustness, behavioral novelty, shock recovery,
+niche formation, or persistent causal innovation.
+
+The fixture cache is generated by a deterministic random-edit test double. It
+validates addressing, provenance, adjudication, and replay—never model or LLM
+performance. A later real-model arm must freeze authentic responses together
+with provider, model and prompt revisions, decoding settings, request identity,
+raw output, usage, and checksums; ecosystem replay must still make no model call.
 
 ### A conjectural EVOLVE V (2026 extension)
 
@@ -173,11 +218,12 @@ Every canonical result should be generated from a committed artifact rather than
 ```text
 experiments/
   configs/                 # named, immutable treatments
+  run_iv_variation.py      # build a fixture cache or replay the matched pilot
 results/reference/
   <experiment>-v1/
-    manifest.json          # commit, environment, config, seeds, schema
+    manifest.json          # revision/source hashes, environment, config, seeds
     trajectories.jsonl     # raw time series
-    summary.json           # estimates and uncertainty
+    summary.json           # descriptive summaries or preregistered estimates
     checksums.json
     figures/
 tests/
@@ -191,7 +237,7 @@ The minimum release bar is:
 
 - conservation and non-negativity checked after every step;
 - deterministic fixed-seed replay;
-- separate named random streams for environment, scheduling, mortality, reproduction, recombination, and mutation;
+- separate named random streams for initialization, scheduling, reproduction, mortality, condition decay, variation gating, and operator events;
 - smoke tests for every documented command;
 - persistent genealogy and event logging;
 - dependency bounds plus a frozen canonical environment;
@@ -204,8 +250,9 @@ The minimum release bar is:
 |---|---|
 | [`src/evolve1970`](src/evolve1970) | Current conserved-chip prototype |
 | [`src/evolve4`](src/evolve4) | EVOLVE IV-inspired physics and typed controller boundary |
-| [`src/evolve_modern`](src/evolve_modern) | Validated controller programs, registry, and future mutator adapters |
+| [`src/evolve_modern`](src/evolve_modern) | Validated controller programs, registry, matched operators, and strict offline proposal cache |
 | [`experiments`](experiments) | Runnable comparisons |
+| [`docs/iv-variation.md`](docs/iv-variation.md) | Matched IV variation protocol, artifact contract, and claim limits |
 | [`docs/original-model.md`](docs/original-model.md) | Quarantined pre-audit note; not the current fidelity statement |
 | [`docs/evolve-family.md`](docs/evolve-family.md) | Quarantined pre-audit timeline; source-by-source repair pending |
 
@@ -215,12 +262,13 @@ Each experiment page should follow the same evidence template: primary-source cl
 
 - [x] **P0 — Repair historical diagnostics:** separate repetition from execution coverage and make the later mutation-control modifier explicit.
 - [x] **P0 — Repair the IV controller boundary:** preserve controller-off physics, add typed intents and programs, isolate controller randomness, and restore both commands as integration pilots.
+- [x] **P2 — Build the matched IV variation pilot:** identical starts, named streams, five arms, an exact proposal budget, fail-closed fixture replay, and deterministic artifacts.
 - [ ] **P0 — Finish the evidence surface:** keep the old IV-language table withdrawn and finish factual corrections in quarantined legacy pages.
 - [ ] **P0 — Add the trust layer:** tests, CI, packaging, lock file, manifests, raw reference results, and documentation generated from artifacts.
 - [ ] **P1 — Build strict 1970 mode:** A–F phenome, mark/resolve semantics, local detritus, automatic reproduction, recognition codes, and separate System I/III configurations.
 - [ ] **P1 — Re-test EVOLVE IV:** flux provenance, spatial nulls, density controls, and partner-removal knockouts.
-- [ ] **P2 — Compare GP operators:** one typed language, matched mutation budgets, ecological selection only.
-- [ ] **P2 — Add cached LLM variation:** preregistered comparisons and deterministic replay.
+- [ ] **P2 — Run an inferential operator study:** preregistered estimands, adequate independent replicates, robustness checks, and ecological selection only.
+- [ ] **P2 — Add genuine GP and cached model variation:** a recursive typed language for subtree GP, plus authentic versioned model responses and deterministic offline replay.
 - [ ] **P3 — Explore communication, evolvable chemistry, codebooks, and new ecological individuals.**
 
 ## Sources and citation

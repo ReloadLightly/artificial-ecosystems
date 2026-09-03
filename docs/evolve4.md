@@ -43,7 +43,9 @@ native movement, an explicit stay, or a validated local target, plus constructio
 reproduction gating, and reproduction-threshold changes. It owns no matter and
 is bypassed completely in ordinary runs. See
 [`language-iv.md`](language-iv.md) for the integration contract and its current
-evidential limits.
+evidential limits. The follow-on
+[`iv-variation.md`](iv-variation.md) protocol matches initial programs,
+physics, named random streams, and proposal accounting across five arms.
 
 ## Current measurements
 
@@ -72,8 +74,10 @@ PYTHONPATH=src python3 experiments/run_language_iv.py
 The construction experiment compares dense and sparse rings with construction
 enabled or disabled over four fixed seeds. The controller commands are separate
 integration pilots and do not make a language-model or operator-comparison
-claim. All check conserved matter. No numerical table is canonical until it is
-generated from a recorded result bundle with revision, environment,
+claim. The separate matched-variation runner now writes such a bundle, but its
+cached arm is a synthetic replay fixture and its four-seed configuration remains
+non-inferential. All check conserved matter. No numerical table is canonical
+until it is generated from a recorded result bundle with revision, environment,
 configuration, seeds, trajectories, and checksums.
 
 ## Stronger causal test

@@ -21,6 +21,7 @@ from typing import List
 import numpy as np
 
 from .control import IVController, IVIntent, IVPercept, IVTraits, MovementMode
+from .randomness import EcologyRandomStreams
 
 
 CONDITION_MIN = -3
@@ -89,10 +90,23 @@ class MetabolicSim:
         config: MetabolicConfig | None = None,
         *,
         controller: IVController | None = None,
+        random_streams: EcologyRandomStreams | None = None,
     ):
         self.cfg = config or MetabolicConfig()
         self.controller = controller
-        self.rng = np.random.default_rng(self.cfg.seed)
+        if random_streams is None:
+            # This single-generator path is a regression contract. All named
+            # handles alias it so routing calls below cannot change the legacy
+            # controller-free draw order.
+            self.rng = np.random.default_rng(self.cfg.seed)
+            self.random_streams = EcologyRandomStreams.legacy(self.rng)
+        else:
+            if not isinstance(random_streams, EcologyRandomStreams):
+                raise TypeError("random_streams must be EcologyRandomStreams or None")
+            self.random_streams = random_streams
+            # Compatibility handle: in split mode ``rng`` denotes only the
+            # initialization stream. Replay evidence should use state_dict().
+            self.rng = random_streams.initialization
         n = self.cfg.n_places
         half = self.cfg.total_units // 2
         base_n, extra_n = divmod(half, n)
@@ -118,11 +132,12 @@ class MetabolicSim:
 
     def _seed(self) -> None:
         start = 6
+        rng = self.random_streams.initialization
         for i in range(self.cfg.n_organisms):
-            pos = int(self.rng.integers(0, self.cfg.n_places))
+            pos = int(rng.integers(0, self.cfg.n_places))
             producer = bool(i % 2 == 0)
-            taste = 1 if self.rng.random() < 0.5 else -1
-            construct = int(self.rng.integers(-1, 2))  # -1, 0, 1
+            taste = 1 if rng.random() < 0.5 else -1
+            construct = int(rng.integers(-1, 2))  # -1, 0, 1
             if self.controller is None:
                 # Keep the controller-free initialization path literal: its
                 # fixed-seed trajectory is a regression contract.
@@ -134,13 +149,13 @@ class MetabolicSim:
                         producer=producer,
                         taste=taste,
                         construct=construct,
-                        genome_tag=int(self.rng.integers(0, 16)),
+                        genome_tag=int(rng.integers(0, 16)),
                         bug_id=self._id(),
                     )
                 )
                 continue
 
-            genome_tag = int(self.rng.integers(0, 16))
+            genome_tag = int(rng.integers(0, 16))
             bug_id = self._id()
             traits = self.controller.initial_traits(
                 bug_id,
@@ -216,7 +231,10 @@ class MetabolicSim:
         for p in self.places:
             if p.condition == 0:
                 continue
-            if self.rng.random() < self.cfg.condition_decay:
+            if (
+                self.random_streams.condition_decay.random()
+                < self.cfg.condition_decay
+            ):
                 p.condition -= 1 if p.condition > 0 else -1
 
     def _niche(self, living: List[Bug]) -> float:
@@ -331,7 +349,7 @@ class MetabolicSim:
         births = 0
         deaths = 0
         newborns: List[Bug] = []
-        order = self.rng.permutation(len(living))
+        order = self.random_streams.scheduling.permutation(len(living))
         for idx in order:
             b = living[int(idx)]
             if not b.alive:
@@ -408,18 +426,31 @@ class MetabolicSim:
                 child_taste = b.taste
                 child_construct = b.construct
                 tag = b.genome_tag
-                legacy_mutation_roll = self.rng.random()
+                legacy_mutation_roll = self.random_streams.reproduction.random()
                 if self.controller is None and legacy_mutation_roll < cfg.mut_prob:
-                    flip = int(self.rng.integers(0, 3))
+                    flip = int(self.random_streams.reproduction.integers(0, 3))
                     if flip == 0:
                         child_prod = not child_prod
                     elif flip == 1:
                         child_taste = -child_taste
                     else:
-                        child_construct = int(self.rng.integers(-1, 2))
-                    tag = (tag + int(self.rng.integers(1, 4))) % 16
+                        child_construct = int(
+                            self.random_streams.reproduction.integers(-1, 2)
+                        )
+                    tag = (
+                        tag + int(self.random_streams.reproduction.integers(1, 4))
+                    ) % 16
                 child_id = self._next + 1
                 if self.controller is not None:
+                    prepare_birth = getattr(self.controller, "prepare_birth", None)
+                    if prepare_birth is not None:
+                        if not callable(prepare_birth):
+                            raise TypeError("controller.prepare_birth must be callable")
+                        prepare_birth(
+                            b.bug_id,
+                            child_id,
+                            tuple(other.bug_id for other in living if other.alive),
+                        )
                     traits = self.controller.offspring_traits(
                         b.bug_id,
                         child_id,
@@ -438,7 +469,9 @@ class MetabolicSim:
                     child_construct = traits.construct
                 dowry = b.stored // 2
                 b.stored -= dowry
-                shift = 1 if self.rng.random() < 0.5 else -1
+                shift = (
+                    1 if self.random_streams.reproduction.random() < 0.5 else -1
+                )
                 assigned_id = self._id()
                 if assigned_id != child_id:
                     raise RuntimeError("controller child ID reservation drifted")
@@ -457,7 +490,9 @@ class MetabolicSim:
                 births += 1
 
             b.age += 1
-            if self.rng.random() < min(0.08, 0.002 + 0.0012 * b.age):
+            if self.random_streams.mortality.random() < min(
+                0.08, 0.002 + 0.0012 * b.age
+            ):
                 half = b.stored // 2
                 self.places[b.position].nutrient += b.stored - half
                 self.places[b.position].waste += half

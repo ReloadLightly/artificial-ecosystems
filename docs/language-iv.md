@@ -1,9 +1,10 @@
 # Typed controllers on EVOLVE IV-inspired physics
 
-> **Status: executable integration pilot.** The physics now executes typed
+> **Status: executable controller integration.** The physics now executes typed
 > controller intents and every seed and newborn has an ID-keyed program record.
-> The former English-policy table remains withdrawn: this stage makes no model
-> call and is not a causal comparison of variation operators.
+> The former English-policy table remains withdrawn. A separate
+> [matched-variation pilot](iv-variation.md) now exercises four variation paths
+> and an inheritance control, but its cache is synthetic and non-inferential.
 
 ## What was repaired
 
@@ -33,8 +34,9 @@ empty instead of fabricating a unit.
 |---|---|---|
 | `src/evolve4/simulation.py` | Matter, scheduling, metabolism, movement application, construction, fission, death | Parse programs or call a model |
 | `src/evolve4/control.py` | Frozen percept/intent/trait types and lifecycle protocol | Mutate bodies or hold policy text |
-| `src/evolve_modern/iv_policies.py` | JSON validation, canonical serialization, pure decisions, typed mutation | Access simulator state or ecological RNG |
-| `src/evolve_modern/iv.py` | Program registry, inheritance, proposal provenance, controller RNG | Own or create matter |
+| `src/evolve_modern/iv_policies.py` | JSON validation, canonical serialization, and pure decisions | Access simulator state or ecological RNG |
+| `src/evolve_modern/iv.py` | Program registry, inheritance, proposal provenance, variation-gate and operator-event RNGs | Own or create matter |
+| `src/evolve_modern/iv_variation.py` | Shared atomic-edit adjudication, matched operators, and strict offline cache replay | Select organisms or call a provider |
 
 With no controller, the original physics takes a literal bypass path. A frozen
 fixed-seed trace covers its history, final organisms, places, next ID, and RNG
@@ -72,10 +74,10 @@ Allowed fields are deliberately small:
 - reproduction threshold: integer `8..30`; and
 - uncrowded requirement: JSON boolean.
 
-Canonical JSON is the heritable representation. The offline heuristic changes
-at most one typed field. A future model adapter may propose JSON, but invalid
-output is logged and the exact parent program is inherited without retry or
-silent repair.
+Canonical JSON is the heritable representation. Matched operators may propose
+one atomic edit through the shared adjudicator. Invalid cached output is logged,
+costs its one proposal opportunity, and gives the child the exact parent program
+without retry or silent repair. Cache integrity failures stop the run.
 
 ## Run the pilot
 
@@ -96,18 +98,30 @@ Consequently, differences between their population statistics are debugging
 observations—not evidence that semantic variation helps, that English packages
 traits advantageously, or that niches emerged.
 
-## Evidence still needed for a real operator experiment
+## What the matched repair adds
 
-1. Give every arm identical initial executable programs and physics.
-2. Compare point mutation, grammar-preserving GP, matched random edits, and
-   cached model proposals with matched proposal probability and edit distance.
-3. Separate ecosystem, scheduler, mortality, reproduction, and controller/model
-   random streams sufficiently for paired counterfactual runs.
-4. Record raw proposals, validation failures, parent/child programs, model and
-   prompt revisions, token use, and checksums.
-5. Measure offspring validity, viability, descendant establishment, robustness,
-   novelty, and recovery under unseen perturbations with uncertainty intervals.
-6. Generate every table from a versioned result bundle.
+The [matched IV variation protocol](iv-variation.md) now supplies identical
+initial executable programs and physics within each seed; named initialization,
+scheduling, reproduction, mortality, condition-decay, variation-gate, and
+operator-event streams; an exact one-response/no-retry proposal budget; and
+event-level proposal provenance in a deterministic checksummed bundle.
 
-Only that later design can test whether semantic variation changes
+It compares typed point edits, uniform random atomic edits, homologous typed-leaf
+recombination, and cached synthetic proposals against inheritance only. The
+schema remains a flat seven-leaf product, so the recombination treatment is not
+subtree GP. The fixture responses are not model observations.
+
+## Evidence still needed
+
+1. Pre-register primary estimands and use enough independent master seeds for a
+   planned inferential analysis.
+2. Add lineage-aware establishment, persistence, robustness, novelty, and shock
+   tests instead of treating final abundance or genotype count as evolvability.
+3. Introduce a recursive typed language before claiming a genuine GP treatment.
+4. Collect authentic model responses under a frozen prompt/model/decoding
+   protocol, retain failures and usage, and replay them offline.
+5. Add density-preserving nulls and causal interventions before making niche or
+   ecological-innovation claims.
+
+Only that later evidence design can test whether an operator changes
 evolvability while ecological persistence remains the sole selector.
