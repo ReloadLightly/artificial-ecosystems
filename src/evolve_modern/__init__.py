@@ -1,1 +1,1 @@
-"""LLM / multi-agent extensions of the 1970 artificial ecosystem."""
+"""Typed-program and text-policy extensions for artificial ecosystems."""

@@ -147,7 +147,9 @@ class MetabolicSim:
                 self.bugs.append(
                     Bug(
                         position=pos,
-                        stored=max(1, taken),
+                        # Zero intake is allowed. Minting a fallback unit here
+                        # breaks the closed-material premise in sparse worlds.
+                        stored=taken,
                         producer=producer,
                         taste=taste,
                         construct=construct,

@@ -1,0 +1,211 @@
+{
+  "arm_means": {
+    "construction_off": {
+      "adjacent_edges": 74.4328125,
+      "alive": 66.1572265625,
+      "blocked_births": 0.0,
+      "condition_variance": 0.0,
+      "edge_cross_fraction": 0.44003941418098913,
+      "edge_enrichment": -0.06455717942893602,
+      "raw_contact": 0.6398194602715741,
+      "role_balance": 0.46819992110991204
+    },
+    "local_construction": {
+      "adjacent_edges": 108.279296875,
+      "alive": 59.035546875,
+      "blocked_births": 0.0,
+      "condition_variance": 1.7268657088279724,
+      "edge_cross_fraction": 0.5167444069632355,
+      "edge_enrichment": 0.012032153045054145,
+      "raw_contact": 0.8069162662140029,
+      "role_balance": 0.46444656077711355
+    },
+    "place_memory_scrambled": {
+      "adjacent_edges": 62.5123046875,
+      "alive": 57.6048828125,
+      "blocked_births": 0.0,
+      "condition_variance": 1.2884414076805115,
+      "edge_cross_fraction": 0.5312446516518298,
+      "edge_enrichment": 0.026982474135905415,
+      "raw_contact": 0.7623347096889707,
+      "role_balance": 0.46187929303847575
+    }
+  },
+  "checks": {
+    "all_runs_conserved": true,
+    "complete_matched_design": true,
+    "no_capacity_blocking": true
+  },
+  "claim_status": "exploratory_causal_diagnostic",
+  "contrasts": [
+    {
+      "bootstrap_95_interval": [
+        0.05763491944666288,
+        0.09733848662586607
+      ],
+      "control": "construction_off",
+      "losses": 7,
+      "mean_difference": 0.07658933247399016,
+      "metric": "edge_enrichment",
+      "n_pairs": 64,
+      "standard_error": 0.010194561882580137,
+      "treatment": "local_construction",
+      "wins": 57
+    },
+    {
+      "bootstrap_95_interval": [
+        -0.029278510451339897,
+        -0.0007945607621525266
+      ],
+      "control": "place_memory_scrambled",
+      "losses": 39,
+      "mean_difference": -0.01495032109085127,
+      "metric": "edge_enrichment",
+      "n_pairs": 64,
+      "standard_error": 0.007311916306773836,
+      "treatment": "local_construction",
+      "wins": 25
+    },
+    {
+      "bootstrap_95_interval": [
+        23.8678759765625,
+        44.59163085937498
+      ],
+      "control": "construction_off",
+      "losses": 12,
+      "mean_difference": 33.846484375,
+      "metric": "adjacent_edges",
+      "n_pairs": 64,
+      "standard_error": 5.306250762953662,
+      "treatment": "local_construction",
+      "wins": 52
+    },
+    {
+      "bootstrap_95_interval": [
+        35.7528662109375,
+        56.45684082031249
+      ],
+      "control": "place_memory_scrambled",
+      "losses": 7,
+      "mean_difference": 45.7669921875,
+      "metric": "adjacent_edges",
+      "n_pairs": 64,
+      "standard_error": 5.349013425662084,
+      "treatment": "local_construction",
+      "wins": 57
+    },
+    {
+      "bootstrap_95_interval": [
+        -9.5224658203125,
+        -4.645678710937503
+      ],
+      "control": "construction_off",
+      "losses": 53,
+      "mean_difference": -7.121679687499999,
+      "metric": "alive",
+      "n_pairs": 64,
+      "standard_error": 1.259038294741228,
+      "treatment": "local_construction",
+      "wins": 11
+    }
+  ],
+  "design": {
+    "arms": [
+      "construction_off",
+      "local_construction",
+      "place_memory_scrambled"
+    ],
+    "config": {
+      "condition_decay": 0.18,
+      "convert_yield": 3,
+      "excrete": 2,
+      "harvest": 4,
+      "max_organisms": 176,
+      "mut_prob": 0.08,
+      "n_organisms": 16,
+      "n_places": 128,
+      "repro_threshold": 14,
+      "steps": 240,
+      "total_units": 800,
+      "verbose_every": 0
+    },
+    "late_steps": 80,
+    "primary_contrast": "local_construction - place_memory_scrambled",
+    "primary_metric": "edge_enrichment",
+    "seeds": [
+      6000,
+      6001,
+      6002,
+      6003,
+      6004,
+      6005,
+      6006,
+      6007,
+      6008,
+      6009,
+      6010,
+      6011,
+      6012,
+      6013,
+      6014,
+      6015,
+      6016,
+      6017,
+      6018,
+      6019,
+      6020,
+      6021,
+      6022,
+      6023,
+      6024,
+      6025,
+      6026,
+      6027,
+      6028,
+      6029,
+      6030,
+      6031,
+      6032,
+      6033,
+      6034,
+      6035,
+      6036,
+      6037,
+      6038,
+      6039,
+      6040,
+      6041,
+      6042,
+      6043,
+      6044,
+      6045,
+      6046,
+      6047,
+      6048,
+      6049,
+      6050,
+      6051,
+      6052,
+      6053,
+      6054,
+      6055,
+      6056,
+      6057,
+      6058,
+      6059,
+      6060,
+      6061,
+      6062,
+      6063
+    ]
+  },
+  "experiment_id": "causal-niches-v1",
+  "interpretation": "Construction increases raw contact and local clustering relative to construction-off, but local construction does not beat a placebo that preserves condition values while scrambling their locations. The current mechanism creates environmental structure and clumping, not demonstrated niche specialization caused by place memory.",
+  "limitations": [
+    "Scrambling breaks cross-step place identity, not within-step sequential effects.",
+    "This tests the repository's EVOLVE IV-inspired mechanism, not the historical implementation.",
+    "Metabolite provenance and lineage establishment are not measured."
+  ],
+  "question": "Does persistent place-specific environmental memory cause producer-recycler spatial complementarity?",
+  "schema": 1
+}

@@ -1,99 +1,75 @@
 # EVOLVE IV-inspired metabolism and construction
 
-> **Status: runnable construction ablation, not an EVOLVE IV replication.** The
-> current world is a compact reconstruction choice informed by Brewster and
-> Conrad's published program. Its contact statistic has no spatial null, so it
-> does not establish niche formation.
+> **Status: runnable reconstruction with one causal intervention.** The code is
+> informed by Brewster and Conrad's EVOLVE IV papers, but it is not their
+> recovered implementation and should not be cited as a replication.
 
-Primary starting points:
+## World
 
-- Jon Brewster and Michael Conrad, *Evolve IV: A Metabolically-Based Artificial
-  Ecosystem Model* (1998).
-- Jon J. Brewster and Michael Conrad, *Computer Experiments on the Development
-  of Niche Specialization in an Artificial Ecosystem* (1999),
-  <https://doi.org/10.1109/CEC.1999.781957>.
+The ring contains two conserved material types:
 
-The papers motivate a world in which organisms exchange metabolites and modify
-local conditions, allowing ecological dependencies and niches to be outcomes
-rather than scores. The repository has not yet demonstrated that its detailed
-mechanisms match those papers.
+- producers consume nutrient and return waste;
+- recyclers consume waste and return nutrient.
 
-## Current world
+Living organisms store matter, pay maintenance, move locally, reproduce by
+splitting stored matter, and return their remaining matter to the environment
+when they die. The signed `condition` of each place is not material. Organisms
+may push it toward −1 or +1, and it decays toward zero.
 
-`src/evolve4` contains a one-dimensional ring with two conserved material pools
-at every place: nutrient and waste. Living bodies store the same conserved
-matter, so the accounting invariant is:
+The invariant is checked throughout the current evidence-bearing experiment:
 
 ```text
-nutrient + waste + stored in living bodies = constant
+nutrient + waste + stored matter in living bodies = total_units
 ```
 
-Organisms are seeded as one of two conversion types. Producers consume nutrient
-and emit waste; recyclers consume waste and emit nutrient. They also carry a
-preferred condition and a construction direction. Construction changes a
-bounded, non-material local condition that relaxes toward zero.
+This model is intentionally compact. It does not recreate the full EVOLVE IV
+chemistry, genotype–phenotype map, or niche measurements.
 
-These roles, yields, inheritance rules, ring geometry, and construction dynamics
-are implementation choices. Calling the roles “metabolic types” does not show
-that reciprocal dependence evolved: type is initialized directly, and the
-current experiment lacks partner-removal or metabolite-knockout tests.
+## Why the old niche statistic was insufficient
 
-An optional typed controller can now receive a frozen local percept and request
-native movement, an explicit stay, or a validated local target, plus construction,
-reproduction gating, and reproduction-threshold changes. It owns no matter and
-is bypassed completely in ordinary runs. See
-[`language-iv.md`](language-iv.md) for the integration contract and its current
-evidential limits. The follow-on
-[`iv-variation.md`](iv-variation.md) protocol matches initial programs,
-physics, named random streams, and proposal accounting across five arms.
+`StepRow.niche_index` reports the fraction of organisms with at least one
+opposite metabolic type in the same or a neighboring place. It rises when:
 
-## Current measurements
+- organisms become more spatially concentrated;
+- population density rises;
+- role frequencies become more balanced; or
+- organisms form genuinely complementary local associations.
 
-| Output | What it measures | What it does not establish |
-|---|---|---|
-| `n_producers`, `n_recyclers` | Abundance of seeded conversion types | Evolved specialization or reciprocal necessity |
-| `niche_index` | Raw fraction with a nearest neighbour of the opposite type | Above-random spatial association |
-| `construct_match` | Builders whose construction sign equals their preference | Individual benefit or adaptation |
-| `condition_var` | Spatial variance in the constructed condition | Functional niche formation |
-| conserved total | Nutrient, waste, and body matter | Historical fidelity |
+It therefore cannot distinguish niche organization from crowding.
 
-The raw cross-type contact rate is strongly density-sensitive and saturates in
-packed worlds. `experiments/run_niches.py` therefore labels it
-`cross_type_contact`; a difference between treatments is descriptive until it
-is compared with density- and occupancy-preserving null models.
+## Causal place-memory experiment
 
-## Run the diagnostic
+[`experiments/run_niches.py`](../experiments/run_niches.py) runs 64 matched seeds
+under three interventions:
 
-```bash
-PYTHONPATH=src python3 -m evolve4
-PYTHONPATH=src python3 experiments/run_niches.py
-PYTHONPATH=src python3 -m evolve_modern.iv
-PYTHONPATH=src python3 experiments/run_language_iv.py
-```
+1. construction off;
+2. ordinary local construction;
+3. construction on, with condition values permuted across places after each
+   complete step.
 
-The construction experiment compares dense and sparse rings with construction
-enabled or disabled over four fixed seeds. The controller commands are separate
-integration pilots and do not make a language-model or operator-comparison
-claim. The separate matched-variation runner now writes such a bundle, and one
-[reference replay](../results/reference/iv-variation-pilot-v1) is retained. Its
-cached arm is a synthetic fixture and its four-seed configuration remains
-non-inferential. All check conserved matter. No numerical table is canonical
-until it is generated from a recorded result bundle with revision, environment,
-configuration, seeds, trajectories, and checksums.
+The permutation keeps the distribution of environmental conditions but breaks
+their cross-step location identity. The primary metric forms undirected edges
+between organisms in the same or neighboring places and subtracts the expected
+opposite-role edge fraction given the current producer/recycler counts.
 
-## Stronger causal test
+The result bundle is in
+[`results/causal-niches-v1`](../results/causal-niches-v1).
 
-1. Trace nutrient and waste provenance through places, bodies, and conversion
-   events.
-2. Compare contact and flux dependence against occupancy-preserving spatial
-   permutations and matched-density placebo worlds.
-3. Remove one conversion type or disable its conversion after communities form;
-   measure collapse, recovery, and metabolite accumulation.
-4. Permute or neutralize construction while preserving movement and density.
-5. Test whether associations persist across descendants and unseen
-   environmental changes.
-6. Reconstruct paper-specific mechanisms from page-level citations and report
-   every deviation in an ambiguity register.
+| arm | edge enrichment | local edges | raw contact |
+|---|---:|---:|---:|
+| construction off | −0.065 | 74.4 | 0.640 |
+| local construction | +0.012 | 108.3 | 0.807 |
+| place memory scrambled | +0.027 | 62.5 | 0.762 |
 
-Only after association exceeds appropriate nulls and survives causal
-interventions should this implementation claim emergent niche specialization.
+Local construction raises adjusted mixing relative to construction-off, but it
+does not beat the scrambled-place placebo. The current mechanism therefore
+changes clustering and environmental heterogeneity without establishing that
+persistent local environmental memory causes niche specialization.
+
+## Limits
+
+The permutation occurs between complete steps. Because the simulator updates
+organisms sequentially, construction can still affect later organisms within
+the same step. The experiment also does not trace metabolite provenance or
+measure lineage establishment. Those are substantive next experiments—not
+reasons to add a larger protocol layer before running them.

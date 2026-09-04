@@ -1,16 +1,10 @@
-"""Modern overlay: organisms whose *strategy text* can be written by an LLM.
+"""Toy natural-language policy overlay on the conserved-chip world.
 
-The physics of chips, places, death, and conservation stay identical to the
-1970 reconstruction. What changes is the controller:
-
-* Classic: a decoded genome is a cyclic program of six primitive routines.
-* Modern: each lineage carries a short natural-language policy. A deterministic
-  interpreter maps that policy + local percept onto the same six routines.
-  An LLM (optional) is used only at birth to rewrite the child's policy,
-  so model calls stay sparse and the loop remains a closed material world.
-
-This is the 2026 analog of Conrad's claim that we should not impose a fitness
-function. The LLM is a *variation operator*, not a judge.
+No language-model backend or live model call exists in this module. Policies
+are executed by a deterministic keyword interpreter and offspring text is
+changed by a hand-written heuristic. The prototype preserves the useful design
+idea—models may eventually propose variation while ecology selects—but it is
+not evidence about model-assisted evolution.
 """
 
 from __future__ import annotations
@@ -73,11 +67,11 @@ def interpret_policy(policy: str, percept: dict) -> str:
     return "wait"
 
 
-LLMMutator = Callable[[str, dict], str]
+PolicyMutator = Callable[[str, dict], str]
 
 
 def heuristic_mutate_policy(policy: str, rng_roll: float) -> str:
-    """Offline stand-in for an LLM rewrite of a child's policy."""
+    """Hand-written offline rewrite used by the toy policy prototype."""
     extras = [
         " Repair when age exceeds ten.",
         " Donate only if storing more than 15 chips.",
