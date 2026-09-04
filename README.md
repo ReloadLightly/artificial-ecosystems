@@ -112,7 +112,11 @@ python3 experiments/plan_model_collection.py plan \
 The committed [calibration bundle](results/reference/iv-world-calibration-v1)
 selects cap `176` and reserves four untouched evidence seeds. The collection
 plan stops at `blocked_pending_provider_selection`; it cannot read credentials
-or call a model. See the [calibration](docs/iv-world-calibration.md) and
+or call a model. The separate
+[qualification fixture](experiments/cache/iv-variation-qualification-fixture-v1.jsonl)
+and [qualification replay](results/reference/iv-variation-qualification-v1)
+exercise all five arms without using the reserved evidence seeds. See the
+[calibration](docs/iv-world-calibration.md) and
 [authentic-cache](docs/model-response-cache.md) protocols.
 
 The conserved total is the most important invariant:

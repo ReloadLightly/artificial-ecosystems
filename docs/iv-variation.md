@@ -49,8 +49,10 @@ The exact configuration is
 The original configuration and reference bundle remain as a versioned record
 of the integration repair. The calibrated five-arm qualification uses a
 separate [configuration](../experiments/configs/iv-variation-qualification-v1.json),
-separate engineering seeds, and the same eight-opportunity fixture contract.
-Those qualification seeds are not reserved model-evidence seeds.
+separate engineering seeds, and the same eight-opportunity fixture contract;
+its [fixture](../experiments/cache/iv-variation-qualification-fixture-v1.jsonl)
+and [reference replay](../results/reference/iv-variation-qualification-v1) are
+retained. Those qualification seeds are not reserved model-evidence seeds.
 
 ## Arms
 

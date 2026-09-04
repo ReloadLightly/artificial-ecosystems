@@ -187,6 +187,10 @@ PYTHONPATH=src python3 experiments/run_iv_variation.py \
   --output "$IV_QUALIFICATION_DIR/results"
 ```
 
+The repository retains the exact
+[qualification fixture](../experiments/cache/iv-variation-qualification-fixture-v1.jsonl)
+and its checksummed [reference replay](../results/reference/iv-variation-qualification-v1).
+
 Passing qualification shows that all five implementations execute, consume
 their declared budgets, preserve invariants, and replay their fixture input in
 the frozen world. It cannot rank the operators, estimate effects, validate the
