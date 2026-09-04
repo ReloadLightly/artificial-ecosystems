@@ -25,6 +25,13 @@ from evolve_modern.iv_variation import CacheIntegrityError
 
 
 CONFIG = ROOT / "experiments" / "configs" / "iv-variation-pilot-v1.json"
+QUALIFICATION_CONFIG = (
+    ROOT / "experiments" / "configs" / "iv-variation-qualification-v1.json"
+)
+FROZEN_WORLD = (
+    ROOT / "results" / "reference" / "iv-world-calibration-v1"
+    / "frozen-world.json"
+)
 
 
 def read_jsonl(path: Path) -> list[dict[str, object]]:
@@ -78,6 +85,8 @@ class IVVariationExperimentTests(unittest.TestCase):
                 "stored": 13,
                 "births": 1,
                 "deaths": 0,
+                "capacity_blocked_births": 2,
+                "capacity_gate_occupancy_peak": 5,
             },
             {
                 "step": 1,
@@ -87,6 +96,8 @@ class IVVariationExperimentTests(unittest.TestCase):
                 "stored": 17,
                 "births": 2,
                 "deaths": 1,
+                "capacity_blocked_births": 0,
+                "capacity_gate_occupancy_peak": 5,
             },
             {
                 "step": 2,
@@ -96,6 +107,8 @@ class IVVariationExperimentTests(unittest.TestCase):
                 "stored": 0,
                 "births": 0,
                 "deaths": 5,
+                "capacity_blocked_births": 1,
+                "capacity_gate_occupancy_peak": 5,
             },
         ]
 
@@ -113,6 +126,9 @@ class IVVariationExperimentTests(unittest.TestCase):
         self.assertEqual(metrics["extinction_step"], 2)
         self.assertEqual(metrics["final_living_body_stored_matter"], 0)
         self.assertEqual(metrics["turnover_total"], 9)
+        self.assertEqual(metrics["capacity_blocked_births_total"], 3)
+        self.assertEqual(metrics["capacity_gate_occupancy_peak"], 5)
+        self.assertEqual(metrics["capacity_gate_occupancy_fraction"], 1.0)
         self.assertIsNone(
             RUNNER._descriptive_run_metrics(
                 trajectory[:2],
@@ -139,6 +155,85 @@ class IVVariationExperimentTests(unittest.TestCase):
             overflow.write_text('{"schema":1e999}\n', encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "non-finite config number: 1e999"):
                 RUNNER.read_config(overflow)
+
+    def test_direct_diagnostic_catches_capacity_hidden_by_mortality(self) -> None:
+        config = json.loads(CONFIG.read_text(encoding="utf-8"))
+        config["physics"]["max_organisms"] = 120
+        run, trajectory, _events = RUNNER.run_arm(
+            config,
+            seed=101,
+            arm_id="inherit_only",
+            operator=None,
+        )
+
+        self.assertEqual(run["population_ceiling_fraction"], 0.0)
+        self.assertLess(max(row["n_alive"] for row in trajectory), 120)
+        self.assertGreater(run["capacity_blocked_births_total"], 0)
+        self.assertEqual(
+            run["capacity_gate_occupancy_peak"],
+            max(row["capacity_gate_occupancy_peak"] for row in trajectory),
+        )
+
+    def test_opportunity_subject_matching_is_descriptive_not_assumed(self) -> None:
+        events: list[dict[str, object]] = []
+        variation_arms = RUNNER.ARM_IDS[1:]
+        for opportunity_id in (0, 1):
+            for arm_id in variation_arms:
+                events.append(
+                    {
+                        "arm_id": arm_id,
+                        "mutation_attempted": True,
+                        "opportunity_id": opportunity_id,
+                        "replicate_id": "seed-17",
+                        "birth_step": opportunity_id,
+                        "parent_bug_id": (
+                            99
+                            if opportunity_id == 1
+                            and arm_id == "typed_point_v1"
+                            else 1
+                        ),
+                        "bug_id": opportunity_id + 2,
+                        "parent_program": "parent",
+                    }
+                )
+        for arm_id in variation_arms[:-1]:
+            events.append(
+                {
+                    "arm_id": arm_id,
+                    "mutation_attempted": True,
+                    "opportunity_id": 2,
+                    "replicate_id": "seed-17",
+                    "birth_step": 2,
+                    "parent_bug_id": 7,
+                    "bug_id": 8,
+                    "parent_program": "parent",
+                }
+            )
+
+        report = RUNNER._opportunity_subject_matching(events)
+
+        self.assertFalse(
+            report["post_divergence_subject_identity_matched_by_design"]
+        )
+        self.assertEqual(report["ordinal_slots_observed"], 3)
+        self.assertEqual(report["slots_with_all_variation_arms"], 2)
+        self.assertEqual(report["subject_identity_matched_slots"], 1)
+        self.assertEqual(
+            report["subject_identity_diverged_slots"],
+            [{"replicate_id": "seed-17", "opportunity_id": 1}],
+        )
+        self.assertEqual(
+            report["incomplete_slots"],
+            [
+                {
+                    "replicate_id": "seed-17",
+                    "opportunity_id": 2,
+                    "observed_arms": sorted(variation_arms[:-1]),
+                    "missing_arms": [variation_arms[-1]],
+                    "duplicate_arms": [],
+                }
+            ],
+        )
 
     def test_fixture_replay_is_byte_deterministic_and_self_checking(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -190,6 +285,20 @@ class IVVariationExperimentTests(unittest.TestCase):
             events = read_jsonl(first / "events.jsonl")
             summary = json.loads((first / "summary.json").read_text())
             manifest = json.loads((first / "manifest.json").read_text())
+            self.assertEqual(manifest["schema"], 2)
+            self.assertEqual(summary["schema"], 2)
+            self.assertTrue(all(row["schema"] == 2 for row in runs))
+            self.assertTrue(all(row["schema"] == 2 for row in trajectories))
+            self.assertTrue(all(row["schema"] == 1 for row in events))
+            self.assertEqual(
+                manifest["record_schemas"],
+                {
+                    "runs.jsonl": 2,
+                    "trajectories.jsonl": 2,
+                    "events.jsonl": 1,
+                    "summary.json": 2,
+                },
+            )
             self.assertEqual(manifest["source_commit"], RUNNER.source_commit())
             self.assertEqual(
                 manifest["source_commit_scope"],
@@ -205,6 +314,28 @@ class IVVariationExperimentTests(unittest.TestCase):
             self.assertEqual(
                 {row["arm_id"] for row in runs},
                 set(RUNNER.ARM_IDS),
+            )
+            self.assertIsNone(
+                manifest["inputs"]["frozen_world_binding"]
+            )
+            self.assertEqual(
+                manifest["matching"]["proposal_budget_semantics"],
+                "birth_triggered_upper_cap",
+            )
+            self.assertTrue(
+                manifest["matching"][
+                    "at_most_one_candidate_validation_per_budgeted_birth"
+                ]
+            )
+            self.assertTrue(
+                manifest["matching"][
+                    "realized_counts_may_differ_after_trajectory_divergence"
+                ]
+            )
+            self.assertTrue(
+                manifest["matching"][
+                    "opportunity_subjects_not_matched_after_divergence"
+                ]
             )
             self.assertEqual(len(runs), 2 * len(RUNNER.ARM_IDS))
             for replicate_id in {row["replicate_id"] for row in runs}:
@@ -254,6 +385,13 @@ class IVVariationExperimentTests(unittest.TestCase):
                 )
                 expected = 0 if run["arm_id"] == "inherit_only" else 2
                 self.assertEqual(run["proposal_budget_used"], expected)
+                expected_cap = 0 if run["arm_id"] == "inherit_only" else 2
+                self.assertEqual(run["proposal_budget_cap"], expected_cap)
+                self.assertEqual(
+                    run["proposal_budget_shortfall"],
+                    run["proposal_budget_cap"]
+                    - run["proposal_budget_used"],
+                )
 
                 run_trajectory = trajectories_by_run[str(run["run_id"])]
                 duration = len(run_trajectory)
@@ -304,6 +442,10 @@ class IVVariationExperimentTests(unittest.TestCase):
                     run["turnover_total"],
                     run["births_total"] + run["deaths_total"],
                 )
+                self.assertEqual(
+                    run["capacity_blocked_births_total"],
+                    sum(row["capacity_blocked_births"] for row in run_trajectory),
+                )
 
             cached_events = [
                 event
@@ -339,7 +481,40 @@ class IVVariationExperimentTests(unittest.TestCase):
                     candidate_trace("cached_proposal_fixture_v1"),
                 )
             self.assertTrue(all(summary["protocol_checks"].values()))
+            duplicate_summary = RUNNER.make_summary(
+                [*runs, dict(runs[0])],
+                events,
+                require_full_budget=True,
+            )
+            self.assertFalse(
+                duplicate_summary["protocol_checks"][
+                    "one_run_per_arm_and_replicate"
+                ]
+            )
             self.assertIn("does not rank", summary["interpretation"])
+            budget_contract = summary["proposal_budget_contract"]
+            self.assertEqual(
+                budget_contract["semantics"],
+                "birth_triggered_upper_cap",
+            )
+            self.assertTrue(
+                budget_contract["full_use_required_for_this_fixture_run"]
+            )
+            self.assertEqual(
+                budget_contract["configured_cap_per_variation_run"],
+                2,
+            )
+            self.assertFalse(
+                budget_contract[
+                    "opportunity_subjects_matched_after_divergence"
+                ]
+            )
+            opportunity_matching = summary["opportunity_subject_matching"]
+            self.assertFalse(
+                opportunity_matching[
+                    "post_divergence_subject_identity_matched_by_design"
+                ]
+            )
             for arm_id, arm_summary in summary["arms"].items():
                 arm_runs = [row for row in runs if row["arm_id"] == arm_id]
                 for key in (
@@ -349,11 +524,18 @@ class IVVariationExperimentTests(unittest.TestCase):
                     "extinction_step",
                     "final_living_body_stored_matter",
                     "turnover_total",
+                    "capacity_blocked_births_total",
+                    "capacity_gate_occupancy_peak",
+                    "capacity_gate_occupancy_fraction",
                 ):
                     self.assertEqual(
                         arm_summary[key],
                         [row[key] for row in arm_runs],
                     )
+                self.assertEqual(
+                    arm_summary["proposal_budget_shortfall"],
+                    [row["proposal_budget_shortfall"] for row in arm_runs],
+                )
                 self.assertEqual(
                     arm_summary["extinction_count"],
                     sum(row["extinction_step"] is not None for row in arm_runs),
@@ -364,11 +546,205 @@ class IVVariationExperimentTests(unittest.TestCase):
                     "role_coexistence_fraction",
                     "final_living_body_stored_matter",
                     "turnover_total",
+                    "capacity_gate_occupancy_fraction",
                 ):
                     self.assertAlmostEqual(
                         arm_summary[f"{key}_mean"],
                         sum(row[key] for row in arm_runs) / len(arm_runs),
                     )
+
+    def test_horizon_shortfall_is_preserved_when_full_use_is_not_required(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            payload = json.loads(CONFIG.read_text(encoding="utf-8"))
+            payload["seeds"] = [17]
+            payload["proposal_budget"] = 100
+            payload["require_full_budget"] = False
+            payload["physics"].update(
+                {
+                    "n_places": 8,
+                    "total_units": 160,
+                    "n_organisms": 6,
+                    "max_organisms": 20,
+                    "steps": 1,
+                    "condition_decay": 0.0,
+                }
+            )
+            config_path = root / "shortfall.json"
+            config_path.write_text(
+                RUNNER.canonical_json(payload) + "\n",
+                encoding="utf-8",
+                newline="\n",
+            )
+            config = RUNNER.read_config(config_path)
+            cache = root / "shortfall-fixture.jsonl"
+            cache_count = RUNNER.build_fixture_cache(config, cache)
+            self.assertLess(cache_count, 100)
+
+            output = root / "shortfall-output"
+            RUNNER.run_experiment(config_path, cache, output)
+            runs = read_jsonl(output / "runs.jsonl")
+            summary = json.loads((output / "summary.json").read_text())
+            variation_runs = [
+                row for row in runs if row["arm_id"] != "inherit_only"
+            ]
+            self.assertTrue(
+                all(0 <= row["proposal_budget_used"] <= 100 for row in runs)
+            )
+            self.assertTrue(
+                all(
+                    row["proposal_budget_shortfall"]
+                    == 100 - row["proposal_budget_used"]
+                    for row in variation_runs
+                )
+            )
+            control_run = next(
+                row for row in runs if row["arm_id"] == "inherit_only"
+            )
+            self.assertEqual(control_run["proposal_budget_cap"], 0)
+            self.assertEqual(control_run["proposal_budget_used"], 0)
+            self.assertEqual(control_run["proposal_budget_shortfall"], 0)
+            self.assertTrue(
+                any(row["proposal_budget_shortfall"] > 0 for row in variation_runs)
+            )
+            self.assertFalse(
+                summary["proposal_budget_contract"][
+                    "full_use_required_for_this_fixture_run"
+                ]
+            )
+            self.assertTrue(all(summary["protocol_checks"].values()))
+
+            parent = RUNNER.initial_programs(config)[0]
+            unused_request = RUNNER.ProposalRequest(
+                experiment_id=str(config["experiment_id"]),
+                replicate_id="unused-replicate",
+                opportunity_id=99,
+                birth_step=0,
+                parent_bug_id=1,
+                child_bug_id=999,
+                parent=parent,
+                operator_event_seed=1,
+            )
+            unused_candidate = RUNNER.RandomAtomicEditOperator().propose(
+                unused_request
+            )
+            extra = RUNNER.make_cache_record(
+                RUNNER.PROFILE,
+                unused_request,
+                raw_text=unused_candidate.raw_candidate,
+            )
+            with cache.open("a", encoding="utf-8", newline="\n") as handle:
+                handle.write(RUNNER.canonical_json(extra) + "\n")
+            with self.assertRaisesRegex(
+                CacheIntegrityError,
+                "responses consumed by the cached trajectory",
+            ):
+                RUNNER.run_experiment(
+                    config_path,
+                    cache,
+                    root / "unused-extra-output",
+                )
+
+    def test_qualification_is_cryptographically_bound_to_frozen_world(
+        self,
+    ) -> None:
+        config = RUNNER.read_config(QUALIFICATION_CONFIG)
+        binding = RUNNER.verify_frozen_world_binding(config)
+        self.assertIsNotNone(binding)
+        assert binding is not None
+        self.assertEqual(binding["seed_role"], "qualification")
+        self.assertEqual(
+            binding["sha256"],
+            RUNNER.sha256_bytes(FROZEN_WORLD.read_bytes()),
+        )
+        world = json.loads(FROZEN_WORLD.read_text(encoding="utf-8"))
+        self.assertEqual(config["physics"], world["physics"])
+        self.assertEqual(config["initial_programs"], world["initial_programs"])
+        self.assertEqual(
+            config["proposal_budget"],
+            world["proposal_budget_policy"]["per_replicate_upper_cap"],
+        )
+        self.assertEqual(
+            config["seeds"],
+            world["qualification_seeds"]["master_seeds"],
+        )
+        self.assertTrue(config["require_full_budget"])
+        self.assertFalse(
+            world["proposal_budget_policy"][
+                "authentic_evidence_requires_full_budget"
+            ]
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            cache = Path(directory) / "empty-cache.jsonl"
+            cache.write_text("", encoding="utf-8")
+            manifest = RUNNER.build_manifest(
+                config,
+                config_path=QUALIFICATION_CONFIG,
+                cache_path=cache,
+                cache_entries=0,
+                frozen_world_binding=binding,
+            )
+        self.assertEqual(
+            manifest["inputs"]["frozen_world_binding"],
+            binding,
+        )
+
+        mutations = {
+            "digest": lambda value: value["frozen_world_binding"].__setitem__(
+                "sha256", "sha256:" + "0" * 64
+            ),
+            "seed-role": lambda value: value[
+                "frozen_world_binding"
+            ].__setitem__("seed_role", "evidence"),
+            "physics": lambda value: value["physics"].__setitem__(
+                "max_organisms", 159
+            ),
+            "budget": lambda value: value.__setitem__("proposal_budget", 7),
+            "full-budget": lambda value: value.__setitem__(
+                "require_full_budget", False
+            ),
+            "seeds": lambda value: value.__setitem__(
+                "seeds", list(reversed(value["seeds"]))
+            ),
+        }
+        for name, mutate in mutations.items():
+            with self.subTest(name=name):
+                tampered = json.loads(json.dumps(config))
+                mutate(tampered)
+                with self.assertRaises(ValueError):
+                    RUNNER.verify_frozen_world_binding(tampered)
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            missing = json.loads(json.dumps(config))
+            missing.pop("frozen_world_binding")
+            missing_path = root / "missing-binding.json"
+            missing_path.write_text(
+                RUNNER.canonical_json(missing) + "\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "frozen_world_binding"):
+                RUNNER.read_config(missing_path)
+
+            bad_digest = json.loads(json.dumps(config))
+            bad_digest["frozen_world_binding"]["sha256"] = (
+                "sha256:" + "0" * 64
+            )
+            bad_path = root / "bad-digest.json"
+            bad_path.write_text(
+                RUNNER.canonical_json(bad_digest) + "\n",
+                encoding="utf-8",
+            )
+            output = root / "must-not-exist"
+            with self.assertRaisesRegex(ValueError, "checksum mismatch"):
+                RUNNER.run_experiment(
+                    bad_path,
+                    root / "cache-is-never-read.jsonl",
+                    output,
+                )
+            self.assertFalse(output.exists())
 
     def test_empty_cache_fails_closed_without_live_fallback(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

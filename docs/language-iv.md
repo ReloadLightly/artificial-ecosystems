@@ -103,8 +103,10 @@ traits advantageously, or that niches emerged.
 The [matched IV variation protocol](iv-variation.md) now supplies identical
 initial executable programs and physics within each seed; named initialization,
 scheduling, reproduction, mortality, condition-decay, variation-gate, and
-operator-event streams; an exact one-response/no-retry proposal budget; and
-event-level proposal provenance in a deterministic checksummed bundle.
+operator-event streams; a shared birth-triggered proposal cap with exact
+one-response/no-retry accounting; and event-level proposal provenance in a
+deterministic checksummed bundle. Later proposal subjects and realized counts
+can diverge because earlier proposals change the birth trajectories.
 
 It compares typed point edits, uniform random atomic edits, homologous typed-leaf
 recombination, and cached synthetic proposals against inheritance only. The

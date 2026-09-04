@@ -82,6 +82,8 @@ class StepRow:
     condition_mean: float
     births: int
     deaths: int
+    capacity_blocked_births: int
+    capacity_gate_occupancy_peak: int
 
 
 class MetabolicSim:
@@ -348,6 +350,8 @@ class MetabolicSim:
         living = [b for b in self.bugs if b.alive]
         births = 0
         deaths = 0
+        capacity_blocked_births = 0
+        capacity_gate_occupancy_peak = len(living)
         newborns: List[Bug] = []
         order = self.random_streams.scheduling.permutation(len(living))
         for idx in order:
@@ -417,9 +421,22 @@ class MetabolicSim:
                 if intent is None or intent.repro_threshold is None
                 else intent.repro_threshold
             )
-            if (
+            reproduction_ready = (
                 (intent is None or intent.reproduce)
                 and b.stored >= repro_threshold
+            )
+            capacity_gate_occupancy = len(living) + len(newborns)
+            capacity_gate_occupancy_peak = max(
+                capacity_gate_occupancy_peak,
+                capacity_gate_occupancy,
+            )
+            if (
+                reproduction_ready
+                and len(living) + len(newborns) >= cfg.max_organisms
+            ):
+                capacity_blocked_births += 1
+            if (
+                reproduction_ready
                 and len(living) + len(newborns) < cfg.max_organisms
             ):
                 child_prod = b.producer
@@ -488,6 +505,10 @@ class MetabolicSim:
                     )
                 )
                 births += 1
+                capacity_gate_occupancy_peak = max(
+                    capacity_gate_occupancy_peak,
+                    len(living) + len(newborns),
+                )
 
             b.age += 1
             if self.random_streams.mortality.random() < min(
@@ -522,6 +543,8 @@ class MetabolicSim:
             condition_mean=float(np.mean(conds)),
             births=births,
             deaths=deaths,
+            capacity_blocked_births=capacity_blocked_births,
+            capacity_gate_occupancy_peak=capacity_gate_occupancy_peak,
         )
         self.history.append(row)
         return row

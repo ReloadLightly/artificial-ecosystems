@@ -51,8 +51,9 @@ The audit began at [`9290a7f`](https://github.com/ReloadLightly/artificial-ecosy
 | EVOLVE IV-inspired metabolism | **Runs** | A useful construction ablation; the present contact statistic does not by itself establish nonrandom niche formation |
 | Text policies on the conserved-chip prototype | **Runs** | A deterministic keyword interpreter with a hand-written string mutator—not an LLM experiment |
 | Typed controllers on IV physics | **Runs; repaired integration pilot** | Strict JSON programs execute, inherit, and mutate through an ID-keyed registry with a separate RNG; this is not yet a language-model experiment |
-| Matched IV variation | **Runs; replay/integration pilot** | Five arms share initial programs, physics, and named seeds; four variation arms share an exact budget while the inheritance control spends none; the cache is synthetic |
-| Real-model variation | **Offline contract only** | The cache schema can record model provenance, but no authentic model-response cache or live provider is integrated |
+| Matched IV variation | **Runs; replay/integration pilot** | Five arms share initial programs, physics, and named seeds; the original cap-40 world is capacity-censored and cannot support an operator comparison |
+| Calibrated IV study world | **Runs; model-blind engineering qualification** | Inheritance-only calibration selects cap `176`; a disjoint five-arm fixture replay has zero blocked births and all variation arms reach the eight-opportunity cap |
+| Real-model variation | **Collection preflight only** | Exact request-record contracts, ordered-sequence cache checks, and hard budget gates are offline; terminal-shortfall manifests remain pending, no provider is selected, and no authentic response is collected |
 
 All ten commands advertised in the original README now execute. The two repaired IV-controller commands are integration pilots, not evidence for the former language-treatment claims; their old table remains withdrawn.
 
@@ -94,6 +95,25 @@ statistical comparison. The repository also retains the
 [synthetic fixture](experiments/cache/iv-variation-fixture-v1.jsonl) and its
 [reference result bundle](results/reference/iv-variation-pilot-v1). See
 [the matched IV variation protocol](docs/iv-variation.md).
+
+The less-saturated successor and authentic-cache preflight are also completely
+offline:
+
+```bash
+IV_CALIBRATION_DIR="$(mktemp -d)/iv-world-calibration-v1"
+PYTHONPATH=src python3 experiments/calibrate_iv_world.py \
+  --config experiments/configs/iv-world-calibration-v1.json \
+  --output "$IV_CALIBRATION_DIR"
+
+python3 experiments/plan_model_collection.py plan \
+  --profile experiments/configs/iv-model-response-collection-profile-v1.json
+```
+
+The committed [calibration bundle](results/reference/iv-world-calibration-v1)
+selects cap `176` and reserves four untouched evidence seeds. The collection
+plan stops at `blocked_pending_provider_selection`; it cannot read credentials
+or call a model. See the [calibration](docs/iv-world-calibration.md) and
+[authentic-cache](docs/model-response-cache.md) protocols.
 
 The conserved total is the most important invariant:
 
@@ -158,7 +178,7 @@ The modern experiment should not merely put a language model inside each organis
 ### Flagship experiment: matched variation operators
 
 The first matched pilot now holds the executable language, initial programs,
-physics, master seeds, and exact proposal budget fixed while changing the
+physics, master seeds, and per-run proposal cap fixed while changing the
 variation path. It includes an inheritance-only negative control.
 
 | Arm ID | Implemented treatment |
@@ -174,6 +194,12 @@ mechanism. They are not permanent event-by-event common random numbers: after
 programs and ecological states diverge, stateful streams can consume different
 numbers of draws.
 
+Proposals occur on the first capped number of births within each arm. Those
+births are endogenous: an accepted edit can change later birth timing, parents,
+and even how many opportunities occur before the fixed horizon. Equal counts in
+the fixture qualification therefore do not make later request subjects paired.
+An evidence run must preserve any terminal shortfall as an outcome.
+
 Each budget unit permits one operator response and at most one candidate
 validation, with no retry or repair. Invalid, unchanged, multi-field,
 non-atomic, and recorded provider-failure responses consume one unit and
@@ -181,20 +207,23 @@ inherit the exact parent. A cache miss or integrity mismatch stops the run. The
 schema-v1 program is a flat seven-leaf product, so homologous leaf
 recombination is **not subtree GP**.
 
-The committed four-seed configuration is intentionally too small for rankings,
-p-values, confidence intervals, or superiority claims. It records proposal
-outcomes; normalized population-occupancy AUC; ceiling and role-coexistence
-fractions; extinction step; final living-body matter; turnover; program
-richness; raw ecological diagnostics; and per-step invariants. It does not yet
+The committed four-seed integration configuration is intentionally too small
+for rankings and is strongly capacity-censored. It records proposal outcomes;
+normalized population-occupancy AUC; ceiling and role-coexistence fractions;
+directly blocked births; extinction step; final living-body matter; turnover;
+program richness; raw ecological diagnostics; and per-step invariants. It does
+not yet
 measure general evolvability, offspring viability as a separate endpoint,
 descendant establishment, robustness, behavioral novelty, shock recovery,
 niche formation, or persistent causal innovation.
 
 The fixture cache is generated by a deterministic random-edit test double. It
 validates addressing, provenance, adjudication, and replay—never model or LLM
-performance. A later real-model arm must freeze authentic responses together
-with provider, model and prompt revisions, decoding settings, request identity,
-raw output, usage, and checksums; ecosystem replay must still make no model call.
+performance. The calibrated successor freezes a cap-176 world before any model
+response is inspected. A later real-model arm must freeze authentic responses
+together with provider, model and prompt revisions, decoding settings, exact
+rendered payload, request identity, raw output, usage, and checksums; ecosystem
+replay must still make no model call.
 
 ### A conjectural EVOLVE V (2026 extension)
 
@@ -221,7 +250,9 @@ Every canonical result should be generated from a committed artifact rather than
 ```text
 experiments/
   configs/                 # named, immutable treatments
+  calibrate_iv_world.py    # choose and freeze a model-blind IV world
   run_iv_variation.py      # build a fixture cache or replay the matched pilot
+  plan_model_collection.py # offline authentic-cache plan and verifier
 results/reference/
   <experiment>-v1/
     manifest.json          # revision/source hashes, environment, config, seeds
@@ -256,6 +287,8 @@ The minimum release bar is:
 | [`src/evolve_modern`](src/evolve_modern) | Validated controller programs, registry, matched operators, and strict offline proposal cache |
 | [`experiments`](experiments) | Runnable comparisons |
 | [`docs/iv-variation.md`](docs/iv-variation.md) | Matched IV variation protocol, artifact contract, and claim limits |
+| [`docs/iv-world-calibration.md`](docs/iv-world-calibration.md) | Model-blind ceiling calibration and frozen-world qualification |
+| [`docs/model-response-cache.md`](docs/model-response-cache.md) | Authentic-response collection, budget, provenance, and offline replay contract |
 | [`docs/original-model.md`](docs/original-model.md) | Quarantined pre-audit note; not the current fidelity statement |
 | [`docs/evolve-family.md`](docs/evolve-family.md) | Quarantined pre-audit timeline; source-by-source repair pending |
 
@@ -265,13 +298,16 @@ Each experiment page should follow the same evidence template: primary-source cl
 
 - [x] **P0 — Repair historical diagnostics:** separate repetition from execution coverage and make the later mutation-control modifier explicit.
 - [x] **P0 — Repair the IV controller boundary:** preserve controller-off physics, add typed intents and programs, isolate controller randomness, and restore both commands as integration pilots.
-- [x] **P2 — Build the matched IV variation pilot:** identical starts, named streams, five arms, an exact proposal budget, fail-closed fixture replay, and deterministic artifacts.
+- [x] **P2 — Build the matched IV variation pilot:** identical starts, named streams, five arms, a shared proposal cap with exact spend accounting, fail-closed fixture replay, and deterministic artifacts.
+- [x] **P2 — Calibrate the IV study world:** measure blocked births directly, select a model-blind cap with explicit headroom, reserve disjoint seed sets, and qualify all five fixture arms.
+- [x] **P2 — Freeze the authentic-cache preflight:** exact rendered-payload identity, versioned profiles and records, fail-closed verification, and hard call/token/cost gates without enabling a provider.
 - [ ] **P0 — Finish the evidence surface:** keep the old IV-language table withdrawn and finish factual corrections in quarantined legacy pages.
 - [ ] **P0 — Finish the trust layer:** add CI, packaging, a lock file, and automated validation of committed result bundles.
 - [ ] **P1 — Build strict 1970 mode:** A–F phenome, mark/resolve semantics, local detritus, automatic reproduction, recognition codes, and separate System I/III configurations.
 - [ ] **P1 — Re-test EVOLVE IV:** flux provenance, spatial nulls, density controls, and partner-removal knockouts.
 - [ ] **P2 — Run an inferential operator study:** preregistered estimands, adequate independent replicates, robustness checks, and ecological selection only.
-- [ ] **P2 — Add genuine GP and cached model variation:** a recursive typed language for subtree GP, plus authentic versioned model responses and deterministic offline replay.
+- [ ] **P2 — Collect and replay authentic model variation:** select an immutable provider/model/tokenizer/price snapshot under an explicit spend authorization, then collect at most 32 sequential responses and replay them offline.
+- [ ] **P2 — Add genuine GP:** introduce a recursive typed language and size-matched subtree operators; the current homologous leaf edit is not subtree GP.
 - [ ] **P3 — Explore communication, evolvable chemistry, codebooks, and new ecological individuals.**
 
 ## Sources and citation

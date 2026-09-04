@@ -6,6 +6,14 @@
 > test double. The four fixed seeds are not an inferential sample, and none of
 > the outputs is evidence for model or LLM performance.
 
+> **Calibration update.** The original pilot's population ceiling of `40`
+> frequently blocked otherwise-ready births, so its ecological summaries must
+> not be interpreted as an operator comparison. A model-blind successor
+> calibration now freezes a less capacity-censored world at
+> `max_organisms = 176`; see the
+> [calibration protocol](iv-world-calibration.md). Authentic model collection
+> remains unrun.
+
 ## Research question
 
 The long-term question is whether the *source of variation* changes what can
@@ -29,7 +37,7 @@ That is a protocol shakedown—not a powered operator comparison.
 | Physics | One committed set of non-seed parameters; the master seed varies only by replicate |
 | Replicates | Four fixed master seeds: `1970`, `1998`, `2026`, `7301` |
 | Variation gate | Probability `1.0` for variation arms; disabled for inheritance control |
-| Proposal cap | Eight spent opportunities per variation arm and seed; zero in the control |
+| Proposal cap | At most eight birth-triggered opportunities per variation arm and seed; zero in the control |
 | Edit contract | Exactly one changed leaf at atomic distance one |
 | Selection | Native ecological birth, persistence, and death only; no score or model judge |
 | Provider access | None; cached replay is offline and fail-closed |
@@ -37,6 +45,12 @@ That is a protocol shakedown—not a powered operator comparison.
 
 The exact configuration is
 [`experiments/configs/iv-variation-pilot-v1.json`](../experiments/configs/iv-variation-pilot-v1.json).
+
+The original configuration and reference bundle remain as a versioned record
+of the integration repair. The calibrated five-arm qualification uses a
+separate [configuration](../experiments/configs/iv-variation-qualification-v1.json),
+separate engineering seeds, and the same eight-opportunity fixture contract.
+Those qualification seeds are not reserved model-evidence seeds.
 
 ## Arms
 
@@ -87,6 +101,14 @@ The four variation arms attempt proposals on their first eight selected births.
 Later births inherit with `budget_exhausted` status. The inheritance control has
 variation disabled and records ordinary exact-parent inheritance.
 
+Eight is an upper cap, not an exogenous treatment dose. Each proposal can alter
+the descendant program and thereby later birth timing, parent identity, donor
+context, and realized opportunity count. This fixture qualification requires
+all variation arms to reach the cap as an engineering check; authentic evidence
+must instead preserve a horizon-complete shortfall as a treatment-mediated
+outcome. Even when counts are equal, post-divergence request subjects are not
+assumed to be paired.
+
 ## Matching and random streams
 
 `IVSeedPlan-v1` derives seven explicit unsigned 64-bit seeds from each master
@@ -133,10 +155,11 @@ responses produced deterministically by the random atomic-edit operator. This
 tests cache construction, lookup, provenance, validation, and byte replay. It
 does **not** approximate, simulate, or benchmark a language model.
 
-The fixture runner also requires exactly one cache record for every configured
-seed and budgeted opportunity. Missing entries, duplicate keys, and valid but
-unused extra entries all stop replay, so the cache input is exact rather than
-merely sufficient.
+Configurations that require full cap use also require one cache record for
+every configured seed and budgeted opportunity. A shortfall-enabled fixture
+instead requires exactly the records its cached trajectory consumes. Missing
+entries, duplicate keys, and valid but unused extras all stop replay, so the
+cache input is exact rather than merely sufficient.
 
 The underlying cache format distinguishes `fixture` from `model` provenance,
 but the pilot runner is intentionally fixed to the fixture profile. Authentic
@@ -193,9 +216,19 @@ directory.
 | `summary.json` | Descriptive per-arm arrays/totals/means plus protocol checks; no inferential ranking |
 | `checksums.json` | SHA-256 digests for every other bundle file; self intentionally excluded |
 
+The repaired runner emits schema v2 for the manifest, run, trajectory, and
+summary records, while the unchanged event record remains v1. The retained
+original pilot bundle is a source-revision-bound v1 artifact; the schema bump
+prevents its older shapes from being confused with newly generated bundles.
+
 The runner checks conservation and non-negativity after every step. It also
 requires identical initial physical/program fingerprints within each master
-seed and full proposal-budget use by every variation arm.
+seed. The pilot and qualification configurations require every variation arm
+to reach their shared cap solely as a fixture engineering check. The artifacts
+report the cap, realized spend, shortfall, and descriptive request-subject
+matching separately. Complete ordinal slots with different subjects are also
+reported separately from incomplete slots where one or more arms had no such
+opportunity.
 
 ## What can and cannot be learned
 
@@ -203,7 +236,7 @@ This pilot can establish that:
 
 - the five treatments initialize identically within a master seed;
 - ecological and variation randomness are routed through named streams;
-- proposal opportunities have exact, auditable accounting;
+- proposal caps and realized opportunities have exact, auditable accounting;
 - all variation candidate sources pass through the same atomic-edit adjudicator;
 - rejection inherits the exact parent without retry; and
 - the offline fixture and result bundle replay deterministically.
@@ -214,6 +247,9 @@ The run-level ecological summaries have deliberately literal definitions:
 |---|---|
 | `population_occupancy_auc_normalized` | Sum of post-step `n_alive`, divided by recorded steps times `max_organisms` |
 | `population_ceiling_fraction` | Fraction of post-step records where `n_alive == max_organisms` |
+| `capacity_blocked_births_total` | Number of reproduction-ready updates rejected by the simulator's population-cap gate; unlike the post-step ceiling fraction, this detects within-step capacity censoring hidden by later mortality |
+| `capacity_gate_occupancy_peak` | Maximum within-step reservation count: the step-start living cohort plus newborns accepted so far; same-step deaths do not reopen slots |
+| `capacity_gate_occupancy_fraction` | `capacity_gate_occupancy_peak / max_organisms`; the calibration headroom rule uses this gate-aligned quantity |
 | `role_coexistence_fraction` | Fraction of post-step records with at least one producer and one recycler alive |
 | `extinction_step` | First recorded step with `n_alive == 0`, otherwise `null` |
 | `final_living_body_stored_matter` | Matter stored in living organisms at the final recorded step |
@@ -242,8 +278,9 @@ reinterpretation of this fixture pilot. It should add:
 3. density controls and causal ecological interventions where niche claims are
    contemplated;
 4. a recursive schema-v2 language before introducing true subtree GP; and
-5. a frozen, authentic model-response cache with prompt/model revisions, usage,
-   collection failures, and no live calls during ecosystem replay.
+5. collect the already-specified, versioned model-response cache only after the
+   provider, immutable model revision, tokenizer, price schedule, and hard
+   spend limit are frozen; ecosystem replay must contain no live calls.
 
 Until then, the honest result is narrow but useful: the matched experimental
 controller is executable, auditable, and ready for a larger evidence design.

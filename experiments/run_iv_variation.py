@@ -46,6 +46,11 @@ from evolve_modern.iv_variation import (
 
 
 EXPERIMENT_SCHEMA = 1
+OUTPUT_SCHEMA = 2
+QUALIFICATION_EXPERIMENT_ID = "iv-variation-qualification-v1"
+FROZEN_WORLD_BINDING_KEYS = frozenset(
+    {"world_id", "calibration_id", "seed_role", "path", "sha256"}
+)
 ARM_IDS = (
     "inherit_only",
     "typed_point_v1",
@@ -149,7 +154,12 @@ def read_config(path: Path) -> dict[str, object]:
         "physics",
         "initial_programs",
     }
-    if type(payload) is not dict or set(payload) != required:
+    if type(payload) is not dict:
+        raise ValueError(f"config keys must be exactly {sorted(required)}")
+    experiment_id = payload.get("experiment_id")
+    if experiment_id == QUALIFICATION_EXPERIMENT_ID:
+        required.add("frozen_world_binding")
+    if set(payload) != required:
         raise ValueError(f"config keys must be exactly {sorted(required)}")
     if payload["schema"] != EXPERIMENT_SCHEMA:
         raise ValueError(f"config schema must be {EXPERIMENT_SCHEMA}")
@@ -184,7 +194,117 @@ def read_config(path: Path) -> dict[str, object]:
     typed = tuple(IVProgram.from_json(value) for value in programs)
     if [program.to_json() for program in typed] != programs:
         raise ValueError("initial_programs must contain canonical JSON strings")
+    if experiment_id == QUALIFICATION_EXPERIMENT_ID:
+        binding = payload["frozen_world_binding"]
+        if type(binding) is not dict or set(binding) != FROZEN_WORLD_BINDING_KEYS:
+            raise ValueError(
+                "qualification frozen_world_binding keys must be exactly "
+                f"{sorted(FROZEN_WORLD_BINDING_KEYS)}"
+            )
+        if binding["path"] != (
+            "results/reference/iv-world-calibration-v1/frozen-world.json"
+        ):
+            raise ValueError("qualification must bind the calibrated v1 world")
+        if binding["world_id"] != "iv-variation-world-v1":
+            raise ValueError("qualification frozen world ID is invalid")
+        if binding["calibration_id"] != "iv-world-calibration-v1":
+            raise ValueError("qualification calibration ID is invalid")
+        if binding["seed_role"] != "qualification":
+            raise ValueError("qualification must use qualification seeds")
+        digest = binding["sha256"]
+        if (
+            type(digest) is not str
+            or not digest.startswith("sha256:")
+            or len(digest) != 71
+            or any(character not in "0123456789abcdef" for character in digest[7:])
+        ):
+            raise ValueError("frozen world checksum must be canonical SHA-256")
     return payload
+
+
+def verify_frozen_world_binding(
+    config: Mapping[str, object],
+) -> dict[str, object] | None:
+    """Verify that a qualification config is an exact view of its frozen world."""
+
+    binding = config.get("frozen_world_binding")
+    if binding is None:
+        if config.get("experiment_id") == QUALIFICATION_EXPERIMENT_ID:
+            raise ValueError("qualification config requires a frozen world binding")
+        return None
+    if config.get("experiment_id") != QUALIFICATION_EXPERIMENT_ID:
+        raise ValueError("only the qualification config may bind a frozen world")
+    if type(binding) is not dict or set(binding) != FROZEN_WORLD_BINDING_KEYS:
+        raise ValueError("invalid frozen world binding")
+    expected_identity = {
+        "world_id": "iv-variation-world-v1",
+        "calibration_id": "iv-world-calibration-v1",
+        "seed_role": "qualification",
+        "path": "results/reference/iv-world-calibration-v1/frozen-world.json",
+    }
+    if any(binding[key] != value for key, value in expected_identity.items()):
+        raise ValueError("invalid qualification frozen world identity")
+    path = ROOT / str(binding["path"])
+    try:
+        payload = path.read_bytes()
+        world = json.loads(payload)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"cannot load frozen world: {exc}") from exc
+    if sha256_bytes(payload) != binding["sha256"]:
+        raise ValueError("frozen world checksum mismatch")
+    if type(world) is not dict:
+        raise ValueError("frozen world must be a JSON object")
+    if world.get("world_id") != binding["world_id"]:
+        raise ValueError("frozen world ID mismatch")
+    if world.get("calibration_id") != binding["calibration_id"]:
+        raise ValueError("frozen calibration ID mismatch")
+    try:
+        qualification = world["qualification_seeds"]
+        assert isinstance(qualification, dict)
+        frozen_seeds = qualification["master_seeds"]
+        budget_policy = world["proposal_budget_policy"]
+        assert isinstance(budget_policy, dict)
+    except (AssertionError, KeyError, TypeError) as exc:
+        raise ValueError(
+            "frozen world lacks qualification seeds or proposal policy"
+        ) from exc
+    comparisons = {
+        "physics": (config["physics"], world.get("physics")),
+        "initial programs": (
+            config["initial_programs"],
+            world.get("initial_programs"),
+        ),
+        "proposal budget cap": (
+            config["proposal_budget"],
+            budget_policy.get("per_replicate_upper_cap"),
+        ),
+        "qualification seeds": (config["seeds"], frozen_seeds),
+    }
+    for label, (actual, expected) in comparisons.items():
+        if actual != expected:
+            raise ValueError(f"qualification {label} differs from frozen world")
+    expected_budget_policy = {
+        "trigger": "birth_event",
+        "per_replicate_upper_cap": config["proposal_budget"],
+        "terminal_shortfall": "preserved_as_outcome",
+        "authentic_evidence_requires_full_budget": False,
+    }
+    if budget_policy != expected_budget_policy:
+        raise ValueError("frozen world proposal budget policy is invalid")
+    if world.get("selected_max_organisms") != config["physics"]["max_organisms"]:
+        raise ValueError("qualification capacity differs from calibrated selection")
+    if config["require_full_budget"] is not True:
+        raise ValueError("qualification must require full fixture-budget use")
+    return {
+        key: binding[key]
+        for key in (
+            "world_id",
+            "calibration_id",
+            "seed_role",
+            "path",
+            "sha256",
+        )
+    }
 
 
 def initial_programs(config: Mapping[str, object]) -> tuple[IVProgram, ...]:
@@ -349,6 +469,12 @@ def _descriptive_run_metrics(
     )
     births_total = sum(int(row["births"]) for row in trajectory)
     deaths_total = sum(int(row["deaths"]) for row in trajectory)
+    capacity_blocked_births_total = sum(
+        int(row["capacity_blocked_births"]) for row in trajectory
+    )
+    capacity_gate_occupancy_peak = max(
+        int(row["capacity_gate_occupancy_peak"]) for row in trajectory
+    )
     return {
         "population_occupancy_auc_normalized": (
             sum(population) / (duration * max_organisms)
@@ -366,6 +492,11 @@ def _descriptive_run_metrics(
         "extinction_step": extinction_step,
         "final_living_body_stored_matter": int(trajectory[-1]["stored"]),
         "turnover_total": births_total + deaths_total,
+        "capacity_blocked_births_total": capacity_blocked_births_total,
+        "capacity_gate_occupancy_peak": capacity_gate_occupancy_peak,
+        "capacity_gate_occupancy_fraction": (
+            capacity_gate_occupancy_peak / max_organisms
+        ),
     }
 
 
@@ -380,12 +511,13 @@ def run_arm(
     replicate_id = f"seed-{seed}"
     run_id = f"{replicate_id}--{arm_id}"
     mutation_probability = 0.0 if arm_id == "inherit_only" else 1.0
+    budget = 0 if arm_id == "inherit_only" else int(config["proposal_budget"])
     simulation, controller = build_controlled_sim(
         make_physics(config, seed),
         controller_seed=plan.variation_gate,
         proposal_seed=plan.operator,
         mutation_probability=mutation_probability,
-        proposal_budget=int(config["proposal_budget"]),
+        proposal_budget=budget,
         programs=initial_programs(config),
         experiment_id=str(config["experiment_id"]),
         replicate_id=replicate_id,
@@ -409,7 +541,7 @@ def run_arm(
         row = asdict(step)
         row.update(
             {
-                "schema": 1,
+                "schema": OUTPUT_SCHEMA,
                 "run_id": run_id,
                 "replicate_id": replicate_id,
                 "arm_id": arm_id,
@@ -427,7 +559,6 @@ def run_arm(
         )
         trajectory.append(row)
 
-    budget = int(config["proposal_budget"])
     if (
         arm_id != "inherit_only"
         and bool(config["require_full_budget"])
@@ -443,7 +574,7 @@ def run_arm(
         max_organisms=simulation.cfg.max_organisms,
     )
     run = {
-        "schema": 1,
+        "schema": OUTPUT_SCHEMA,
         "run_id": run_id,
         "replicate_id": replicate_id,
         "arm_id": arm_id,
@@ -463,6 +594,7 @@ def run_arm(
         "steps_completed": len(trajectory),
         "proposal_budget_cap": budget,
         "proposal_budget_used": controller.proposal_budget_used,
+        "proposal_budget_shortfall": budget - controller.proposal_budget_used,
         "proposals_accepted": controller.accepted_proposals,
         "proposals_rejected": controller.rejected_proposals,
         "births_total": sum(int(row["births"]) for row in trajectory),
@@ -481,6 +613,7 @@ def run_arm(
 def build_fixture_cache(config: Mapping[str, object], path: Path) -> int:
     if path.exists():
         raise FileExistsError(f"refusing to overwrite fixture cache: {path}")
+    verify_frozen_world_binding(config)
     recorder = FixtureRecorder()
     for seed in config["seeds"]:
         run_arm(
@@ -512,12 +645,25 @@ def _arm_summary(rows: Sequence[Mapping[str, object]]) -> dict[str, object]:
     return {
         "runs": len(rows),
         "proposal_budget_used": values("proposal_budget_used"),
+        "proposal_budget_shortfall": values("proposal_budget_shortfall"),
         "proposals_accepted_total": sum(values("proposals_accepted")),
         "proposals_rejected_total": sum(values("proposals_rejected")),
         "births_total": values("births_total"),
         "deaths_total": values("deaths_total"),
         "turnover_total": values("turnover_total"),
         "turnover_total_mean": mean("turnover_total"),
+        "capacity_blocked_births_total": values(
+            "capacity_blocked_births_total"
+        ),
+        "capacity_gate_occupancy_peak": values(
+            "capacity_gate_occupancy_peak"
+        ),
+        "capacity_gate_occupancy_fraction": real_values(
+            "capacity_gate_occupancy_fraction"
+        ),
+        "capacity_gate_occupancy_fraction_mean": real_mean(
+            "capacity_gate_occupancy_fraction"
+        ),
         "alive_final": values("alive_final"),
         "alive_final_mean": mean("alive_final"),
         "unique_programs_final": values("unique_programs_final"),
@@ -548,10 +694,107 @@ def _arm_summary(rows: Sequence[Mapping[str, object]]) -> dict[str, object]:
     }
 
 
-def make_summary(runs: Sequence[Mapping[str, object]]) -> dict[str, object]:
+def _opportunity_subject_matching(
+    events: Sequence[Mapping[str, object]],
+) -> dict[str, object]:
+    """Describe, without assuming, whether ordinal birth subjects stayed matched."""
+
+    variation_arms = set(ARM_IDS) - {"inherit_only"}
+    fields = (
+        "birth_step",
+        "parent_bug_id",
+        "bug_id",
+        "parent_program",
+    )
+    grouped: dict[tuple[str, int], list[Mapping[str, object]]] = {}
+    for event in events:
+        if event["arm_id"] not in variation_arms or not event["mutation_attempted"]:
+            continue
+        opportunity_id = event["opportunity_id"]
+        if type(opportunity_id) is not int:
+            raise ValueError("attempted proposal lacks an integer opportunity ID")
+        key = (str(event["replicate_id"]), opportunity_id)
+        grouped.setdefault(key, []).append(event)
+
+    complete = []
+    matched = []
+    divergent = []
+    incomplete = []
+    for key in sorted(grouped):
+        rows = grouped[key]
+        arm_counts = {
+            arm: sum(str(row["arm_id"]) == arm for row in rows)
+            for arm in variation_arms
+        }
+        is_complete = all(count == 1 for count in arm_counts.values())
+        if not is_complete:
+            incomplete.append(
+                {
+                    "replicate_id": key[0],
+                    "opportunity_id": key[1],
+                    "observed_arms": sorted(
+                        arm for arm, count in arm_counts.items() if count > 0
+                    ),
+                    "missing_arms": sorted(
+                        arm for arm, count in arm_counts.items() if count == 0
+                    ),
+                    "duplicate_arms": sorted(
+                        arm for arm, count in arm_counts.items() if count > 1
+                    ),
+                }
+            )
+            continue
+        complete.append(key)
+        identities = {
+            tuple(row[field] for field in fields)
+            for row in rows
+        }
+        target = matched if len(identities) == 1 else divergent
+        target.append(key)
+
+    def keys(values: Sequence[tuple[str, int]]) -> list[dict[str, object]]:
+        return [
+            {"replicate_id": replicate, "opportunity_id": opportunity}
+            for replicate, opportunity in values
+        ]
+
+    return {
+        "semantics": "ordinal_slots_on_endogenous_birth_trajectories",
+        "identity_fields": list(fields),
+        "same_ordinal_operator_event_seeds_by_design": True,
+        "post_divergence_subject_identity_matched_by_design": False,
+        "ordinal_slots_observed": len(grouped),
+        "slots_with_all_variation_arms": len(complete),
+        "subject_identity_matched_slots": len(matched),
+        "subject_identity_diverged_slots": keys(divergent),
+        "incomplete_slots": incomplete,
+    }
+
+
+def make_summary(
+    runs: Sequence[Mapping[str, object]],
+    events: Sequence[Mapping[str, object]],
+    *,
+    require_full_budget: bool,
+) -> dict[str, object]:
     grouped = {
         arm: [row for row in runs if row["arm_id"] == arm] for arm in ARM_IDS
     }
+    replicate_ids = {str(row["replicate_id"]) for row in runs}
+    observed_arm_ids = {str(row["arm_id"]) for row in runs}
+    actual_pairs = [
+        (str(row["replicate_id"]), str(row["arm_id"])) for row in runs
+    ]
+    expected_pairs = {
+        (replicate_id, arm_id)
+        for replicate_id in replicate_ids
+        for arm_id in ARM_IDS
+    }
+    arm_run_matrix_exact = (
+        observed_arm_ids == set(ARM_IDS)
+        and len(actual_pairs) == len(set(actual_pairs))
+        and set(actual_pairs) == expected_pairs
+    )
     fingerprints_match = all(
         len(
             {
@@ -561,17 +804,58 @@ def make_summary(runs: Sequence[Mapping[str, object]]) -> dict[str, object]:
             }
         )
         == 1
-        for replicate in {str(row["replicate_id"]) for row in runs}
+        for replicate in replicate_ids
+    )
+    variation_runs = [row for row in runs if row["arm_id"] != "inherit_only"]
+    control_runs = [row for row in runs if row["arm_id"] == "inherit_only"]
+    if not variation_runs:
+        raise ValueError("summary requires at least one variation run")
+    all_variation_runs_reached_cap = all(
+        row["proposal_budget_used"] == row["proposal_budget_cap"]
+        for row in variation_runs
+    )
+    equal_counts_within_seed = all(
+        len(
+            {
+                row["proposal_budget_used"]
+                for row in variation_runs
+                if row["replicate_id"] == replicate
+            }
+        )
+        == 1
+        for replicate in replicate_ids
+    )
+    budget_caps = {int(row["proposal_budget_cap"]) for row in variation_runs}
+    if len(budget_caps) != 1:
+        raise ValueError("variation runs do not share one proposal budget cap")
+    budget_cap = next(iter(budget_caps))
+    inheritance_control_zero_budget = all(
+        int(row["proposal_budget_cap"]) == 0
+        and int(row["proposal_budget_used"]) == 0
+        and int(row["proposal_budget_shortfall"]) == 0
+        for row in control_runs
     )
     return {
-        "schema": 1,
+        "schema": OUTPUT_SCHEMA,
         "claim_status": "exploratory_integration_replay_pilot",
         "interpretation": (
             "Descriptive integration metrics only. The fixture cache is not a "
-            "model result, and this pilot does not rank variation operators."
+            "model result, and this pilot does not rank variation operators. "
+            "Proposal opportunities are triggered by endogenous births."
         ),
+        "proposal_budget_contract": {
+            "semantics": "birth_triggered_upper_cap",
+            "configured_cap_per_variation_run": budget_cap,
+            "full_use_required_for_this_fixture_run": require_full_budget,
+            "all_variation_runs_reached_cap": all_variation_runs_reached_cap,
+            "realized_counts_equal_within_seed": equal_counts_within_seed,
+            "opportunity_subjects_matched_after_divergence": False,
+            "shortfalls_are_outcomes_when_full_use_is_not_required": True,
+        },
+        "opportunity_subject_matching": _opportunity_subject_matching(events),
         "protocol_checks": {
-            "arm_ids_exact": tuple(grouped) == ARM_IDS,
+            "arm_ids_exact": observed_arm_ids == set(ARM_IDS),
+            "one_run_per_arm_and_replicate": arm_run_matrix_exact,
             "initial_fingerprints_match_within_seed": fingerprints_match,
             "conservation_all_runs": all(
                 bool(row["conservation_all_steps"]) for row in runs
@@ -579,13 +863,11 @@ def make_summary(runs: Sequence[Mapping[str, object]]) -> dict[str, object]:
             "nonnegative_all_runs": all(
                 bool(row["nonnegative_all_steps"]) for row in runs
             ),
-            "operator_budgets_full": all(
-                arm == "inherit_only"
-                or all(
-                    row["proposal_budget_used"] == row["proposal_budget_cap"]
-                    for row in rows
-                )
-                for arm, rows in grouped.items()
+            "configured_full_budget_requirement_met": (
+                not require_full_budget or all_variation_runs_reached_cap
+            ),
+            "inheritance_control_zero_proposal_budget": (
+                inheritance_control_zero_budget
             ),
             "no_live_model_calls": True,
             "fixture_cache_only": True,
@@ -600,10 +882,11 @@ def build_manifest(
     config_path: Path,
     cache_path: Path,
     cache_entries: int,
+    frozen_world_binding: Mapping[str, object] | None,
 ) -> dict[str, object]:
     programs = list(config["initial_programs"])
     return {
-        "schema": 1,
+        "schema": OUTPUT_SCHEMA,
         "experiment_id": config["experiment_id"],
         "claim_status": config["claim_status"],
         "source_commit": source_commit(),
@@ -626,6 +909,11 @@ def build_manifest(
             "cache_entries": cache_entries,
             "cache_provenance": "fixture",
             "initial_programs_sha256": canonical_sha(programs),
+            "frozen_world_binding": (
+                dict(frozen_world_binding)
+                if frozen_world_binding is not None
+                else None
+            ),
         },
         "arms": list(ARM_IDS),
         "seeds": [
@@ -634,16 +922,22 @@ def build_manifest(
         "matching": {
             "same_initial_program_bytes": True,
             "same_physics_and_named_ecology_seeds": True,
-            "one_candidate_per_budgeted_birth": True,
+            "at_most_one_candidate_validation_per_budgeted_birth": True,
             "proposal_budget_cost": 1,
-            "proposal_budget": config["proposal_budget"],
+            "proposal_budget_cap": config["proposal_budget"],
+            "proposal_budget_semantics": "birth_triggered_upper_cap",
+            "full_budget_required_for_this_fixture_run": config[
+                "require_full_budget"
+            ],
+            "realized_counts_may_differ_after_trajectory_divergence": True,
+            "opportunity_subjects_not_matched_after_divergence": True,
             "common_random_seeds_not_paired_counterfactuals": True,
         },
         "record_schemas": {
-            "runs.jsonl": 1,
-            "trajectories.jsonl": 1,
+            "runs.jsonl": OUTPUT_SCHEMA,
+            "trajectories.jsonl": OUTPUT_SCHEMA,
             "events.jsonl": 1,
-            "summary.json": 1,
+            "summary.json": OUTPUT_SCHEMA,
         },
         "metric_definitions": {
             "population_occupancy_auc_normalized": (
@@ -665,12 +959,35 @@ def build_manifest(
                 "stored matter in living organisms at the final recorded step"
             ),
             "turnover_total": "births_total plus deaths_total within the run",
+            "capacity_blocked_births_total": (
+                "reproduction-ready organism updates rejected by the "
+                "implemented capacity reservation gate"
+            ),
+            "capacity_gate_occupancy_peak": (
+                "maximum within-step reservation count: step-start living "
+                "cohort plus accepted newborns; same-step deaths do not "
+                "reopen slots"
+            ),
+            "capacity_gate_occupancy_fraction": (
+                "capacity_gate_occupancy_peak divided by max_organisms"
+            ),
         },
         "limitations": [
             "This small fixed-seed pilot is descriptive and non-inferential.",
             "The cached arm replays synthetic fixture proposals, not model output.",
             "Homologous typed-leaf recombination is not recursive subtree GP.",
-            "Common stateful streams do not preserve draw-level pairing after divergence.",
+            (
+                "Common stateful streams do not preserve draw-level pairing "
+                "after divergence."
+            ),
+            (
+                "Birth-triggered proposal timing and parent identity can "
+                "differ after divergence."
+            ),
+            (
+                "Equal realized counts, when required here, do not match "
+                "opportunity subjects."
+            ),
         ],
         "reproduce": (
             "PYTHONPATH=src python3 experiments/run_iv_variation.py "
@@ -683,12 +1000,21 @@ def run_experiment(config_path: Path, cache_path: Path, output: Path) -> None:
     if output.exists():
         raise FileExistsError(f"refusing to overwrite output directory: {output}")
     config = read_config(config_path)
+    frozen_world_binding = verify_frozen_world_binding(config)
     store = CachedProposalStore.from_jsonl(cache_path)
-    expected_cache_entries = len(config["seeds"]) * int(config["proposal_budget"])
-    if len(store) != expected_cache_entries:
+    maximum_cache_entries = len(config["seeds"]) * int(
+        config["proposal_budget"]
+    )
+    require_full_budget = bool(config["require_full_budget"])
+    if require_full_budget and len(store) != maximum_cache_entries:
         raise CacheIntegrityError(
             "fixture cache must contain exactly "
-            f"{expected_cache_entries} records; found {len(store)}"
+            f"{maximum_cache_entries} records; found {len(store)}"
+        )
+    if not require_full_budget and len(store) > maximum_cache_entries:
+        raise CacheIntegrityError(
+            "fixture cache exceeds the configured upper cap of "
+            f"{maximum_cache_entries} records; found {len(store)}"
         )
     runs: list[dict[str, object]] = []
     trajectories: list[dict[str, object]] = []
@@ -705,7 +1031,29 @@ def run_experiment(config_path: Path, cache_path: Path, output: Path) -> None:
             trajectories.extend(arm_trajectory)
             events.extend(arm_events)
 
-    summary = make_summary(runs)
+    replayed_cache_keys = [
+        event["cache_key"]
+        for event in events
+        if event["arm_id"] == "cached_proposal_fixture_v1"
+        and event["mutation_attempted"]
+    ]
+    if (
+        any(type(key) is not str for key in replayed_cache_keys)
+        or len(set(replayed_cache_keys)) != len(replayed_cache_keys)
+    ):
+        raise CacheIntegrityError("cached arm did not replay unique cache keys")
+    if len(replayed_cache_keys) != len(store):
+        raise CacheIntegrityError(
+            "fixture cache must contain exactly the responses consumed by the "
+            f"cached trajectory; consumed {len(replayed_cache_keys)}, found "
+            f"{len(store)}"
+        )
+
+    summary = make_summary(
+        runs,
+        events,
+        require_full_budget=require_full_budget,
+    )
     if not all(summary["protocol_checks"].values()):
         raise RuntimeError(f"pilot protocol check failed: {summary['protocol_checks']}")
     output.mkdir(parents=True)
@@ -717,6 +1065,7 @@ def run_experiment(config_path: Path, cache_path: Path, output: Path) -> None:
                     config_path=config_path,
                     cache_path=cache_path,
                     cache_entries=len(store),
+                    frozen_world_binding=frozen_world_binding,
                 )
             )
             + "\n"
