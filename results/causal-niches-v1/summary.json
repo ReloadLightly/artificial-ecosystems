@@ -1,34 +1,34 @@
 {
   "arm_means": {
     "construction_off": {
-      "adjacent_edges": 74.4328125,
-      "alive": 66.1572265625,
+      "adjacent_edges": 75.156640625,
+      "alive": 65.3095703125,
       "blocked_births": 0.0,
       "condition_variance": 0.0,
-      "edge_cross_fraction": 0.44003941418098913,
-      "edge_enrichment": -0.06455717942893602,
-      "raw_contact": 0.6398194602715741,
-      "role_balance": 0.46819992110991204
+      "edge_cross_fraction": 0.43684975863199055,
+      "edge_enrichment": -0.06782788932689164,
+      "raw_contact": 0.634745142745102,
+      "role_balance": 0.4690416145402568
     },
     "local_construction": {
-      "adjacent_edges": 108.279296875,
-      "alive": 59.035546875,
+      "adjacent_edges": 112.6326171875,
+      "alive": 61.912890625,
       "blocked_births": 0.0,
-      "condition_variance": 1.7268657088279724,
-      "edge_cross_fraction": 0.5167444069632355,
-      "edge_enrichment": 0.012032153045054145,
-      "raw_contact": 0.8069162662140029,
-      "role_balance": 0.46444656077711355
+      "condition_variance": 1.7094677090644836,
+      "edge_cross_fraction": 0.5222840929846496,
+      "edge_enrichment": 0.0178129874540114,
+      "raw_contact": 0.8138752340629343,
+      "role_balance": 0.4659637909873451
     },
     "place_memory_scrambled": {
-      "adjacent_edges": 62.5123046875,
-      "alive": 57.6048828125,
+      "adjacent_edges": 64.1478515625,
+      "alive": 58.025,
       "blocked_births": 0.0,
-      "condition_variance": 1.2884414076805115,
-      "edge_cross_fraction": 0.5312446516518298,
-      "edge_enrichment": 0.026982474135905415,
-      "raw_contact": 0.7623347096889707,
-      "role_balance": 0.46187929303847575
+      "condition_variance": 1.3130990505218505,
+      "edge_cross_fraction": 0.527118753454752,
+      "edge_enrichment": 0.02296792941783851,
+      "raw_contact": 0.7620015621534727,
+      "role_balance": 0.4619082103813297
     }
   },
   "checks": {
@@ -40,73 +40,73 @@
   "contrasts": [
     {
       "bootstrap_95_interval": [
-        0.05763491944666288,
-        0.09733848662586607
+        0.0691168175071228,
+        0.10312696058466701
       ],
       "control": "construction_off",
-      "losses": 7,
-      "mean_difference": 0.07658933247399016,
+      "losses": 4,
+      "mean_difference": 0.08564087678090304,
       "metric": "edge_enrichment",
       "n_pairs": 64,
-      "standard_error": 0.010194561882580137,
+      "standard_error": 0.008732601288919808,
       "treatment": "local_construction",
-      "wins": 57
+      "wins": 60
     },
     {
       "bootstrap_95_interval": [
-        -0.029278510451339897,
-        -0.0007945607621525266
+        -0.02134269055740183,
+        0.011305965615278891
       ],
       "control": "place_memory_scrambled",
       "losses": 39,
-      "mean_difference": -0.01495032109085127,
+      "mean_difference": -0.005154941963827106,
       "metric": "edge_enrichment",
       "n_pairs": 64,
-      "standard_error": 0.007311916306773836,
+      "standard_error": 0.008335407176052665,
       "treatment": "local_construction",
       "wins": 25
     },
     {
       "bootstrap_95_interval": [
-        23.8678759765625,
-        44.59163085937498
+        26.386376953125,
+        50.04067871093749
       ],
       "control": "construction_off",
-      "losses": 12,
-      "mean_difference": 33.846484375,
+      "losses": 9,
+      "mean_difference": 37.4759765625,
       "metric": "adjacent_edges",
       "n_pairs": 64,
-      "standard_error": 5.306250762953662,
+      "standard_error": 6.139059127921783,
       "treatment": "local_construction",
-      "wins": 52
+      "wins": 55
     },
     {
       "bootstrap_95_interval": [
-        35.7528662109375,
-        56.45684082031249
+        37.265156250000004,
+        61.13357421874999
       ],
       "control": "place_memory_scrambled",
-      "losses": 7,
-      "mean_difference": 45.7669921875,
+      "losses": 3,
+      "mean_difference": 48.484765625,
       "metric": "adjacent_edges",
       "n_pairs": 64,
-      "standard_error": 5.349013425662084,
+      "standard_error": 6.197328756560039,
       "treatment": "local_construction",
-      "wins": 57
+      "wins": 61
     },
     {
       "bootstrap_95_interval": [
-        -9.5224658203125,
-        -4.645678710937503
+        -5.403525390625001,
+        -1.3257666015625005
       ],
       "control": "construction_off",
-      "losses": 53,
-      "mean_difference": -7.121679687499999,
+      "losses": 40,
+      "mean_difference": -3.3966796874999994,
       "metric": "alive",
       "n_pairs": 64,
-      "standard_error": 1.259038294741228,
+      "standard_error": 1.0492814766462972,
       "treatment": "local_construction",
-      "wins": 11
+      "wins": 24
     }
   ],
   "design": {
@@ -132,6 +132,18 @@
     "late_steps": 80,
     "primary_contrast": "local_construction - place_memory_scrambled",
     "primary_metric": "edge_enrichment",
+    "randomness": {
+      "derivation_version": 1,
+      "ecology_streams": [
+        "initialization",
+        "scheduling",
+        "reproduction",
+        "mortality",
+        "condition_decay"
+      ],
+      "scramble_stream": "SeedSequence([seed, 0x4E49434845])",
+      "seed_plan": "IVSeedPlan.from_master(seed)"
+    },
     "seeds": [
       6000,
       6001,
@@ -200,9 +212,10 @@
     ]
   },
   "experiment_id": "causal-niches-v1",
-  "interpretation": "Construction increases raw contact and local clustering relative to construction-off, but local construction does not beat a placebo that preserves condition values while scrambling their locations. The current mechanism creates environmental structure and clumping, not demonstrated niche specialization caused by place memory.",
+  "interpretation": "Construction increases raw contact and local clustering relative to construction-off, but local construction is indistinguishable from a placebo that preserves condition values while scrambling their locations. The current mechanism creates environmental structure and clumping, not demonstrated niche specialization caused by place memory.",
   "limitations": [
     "Scrambling breaks cross-step place identity, not within-step sequential effects.",
+    "This is one exploratory parameter regime, not a robustness surface.",
     "This tests the repository's EVOLVE IV-inspired mechanism, not the historical implementation.",
     "Metabolite provenance and lineage establishment are not measured."
   ],

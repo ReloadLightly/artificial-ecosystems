@@ -48,23 +48,28 @@ under three interventions:
    complete step.
 
 The permutation keeps the distribution of environmental conditions but breaks
-their cross-step location identity. The primary metric forms undirected edges
-between organisms in the same or neighboring places and subtracts the expected
-opposite-role edge fraction given the current producer/recycler counts.
+their cross-step location identity. All arms derive independent named streams
+for initialization, scheduling, reproduction, mortality, and condition decay
+from the same master seed, avoiding cross-mechanism RNG coupling. The
+primary metric forms undirected edges between organisms in the same or
+neighboring places and subtracts the expected opposite-role edge fraction given
+the current producer/recycler counts.
 
 The result bundle is in
 [`results/causal-niches-v1`](../results/causal-niches-v1).
 
 | arm | edge enrichment | local edges | raw contact |
 |---|---:|---:|---:|
-| construction off | −0.065 | 74.4 | 0.640 |
-| local construction | +0.012 | 108.3 | 0.807 |
-| place memory scrambled | +0.027 | 62.5 | 0.762 |
+| construction off | −0.068 | 75.2 | 0.635 |
+| local construction | +0.018 | 112.6 | 0.814 |
+| place memory scrambled | +0.023 | 64.1 | 0.762 |
 
 Local construction raises adjusted mixing relative to construction-off, but it
-does not beat the scrambled-place placebo. The current mechanism therefore
-changes clustering and environmental heterogeneity without establishing that
-persistent local environmental memory causes niche specialization.
+is statistically indistinguishable from the scrambled-place placebo (difference
+−0.005; paired-bootstrap 95% interval −0.021 to +0.011). The current mechanism
+therefore changes clustering and environmental heterogeneity
+without establishing that persistent local environmental memory causes niche
+specialization.
 
 ## Limits
 

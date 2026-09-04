@@ -10,7 +10,9 @@ Three matched arms are run on the EVOLVE IV-inspired ring:
 
 The primary statistic is the fraction of local producer--recycler edges minus
 its random-mixing expectation given the current role counts. Raw contact is
-reported only as a density-sensitive diagnostic.
+reported only as a density-sensitive diagnostic. Matched arms derive separate
+named ecological random streams from the same master seed, so disabling one
+mechanism cannot silently shift every later source of randomness.
 """
 
 from __future__ import annotations
@@ -28,6 +30,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from evolve4.randomness import EcologyRandomStreams, IVSeedPlan
 from evolve4.simulation import Bug, MetabolicConfig, MetabolicSim
 
 
@@ -48,6 +51,18 @@ CONFIG = dict(
     mut_prob=0.08,
     condition_decay=0.18,
     verbose_every=0,
+)
+RAW_FIELDS = (
+    "seed",
+    "arm",
+    "conservation_ok",
+    "edge_enrichment",
+    "edge_cross_fraction",
+    "adjacent_edges",
+    "raw_contact",
+    "condition_variance",
+    "alive",
+    "role_balance",
 )
 METRICS = (
     "edge_enrichment",
@@ -95,12 +110,14 @@ def scramble_place_memory(sim: MetabolicSim, rng: np.random.Generator) -> None:
 
 
 def run_one(seed: int, arm: str) -> dict[str, object]:
+    seed_plan = IVSeedPlan.from_master(seed)
     sim = MetabolicSim(
         MetabolicConfig(
             seed=seed,
             construction=arm != "construction_off",
             **CONFIG,
-        )
+        ),
+        random_streams=EcologyRandomStreams.from_plan(seed_plan),
     )
     scramble_rng = np.random.default_rng(
         np.random.SeedSequence([seed, 0x4E49434845])
@@ -202,6 +219,12 @@ def summarize(rows: list[dict[str, object]]) -> dict[str, object]:
             "config": CONFIG,
             "primary_metric": "edge_enrichment",
             "primary_contrast": "local_construction - place_memory_scrambled",
+            "randomness": {
+                "seed_plan": "IVSeedPlan.from_master(seed)",
+                "derivation_version": IVSeedPlan.DERIVATION_VERSION,
+                "ecology_streams": list(IVSeedPlan.ECOLOGY_STREAM_NAMES),
+                "scramble_stream": "SeedSequence([seed, 0x4E49434845])",
+            },
         },
         "arm_means": means,
         "contrasts": contrasts,
@@ -212,13 +235,14 @@ def summarize(rows: list[dict[str, object]]) -> dict[str, object]:
         },
         "interpretation": (
             "Construction increases raw contact and local clustering relative to "
-            "construction-off, but local construction does not beat a placebo "
-            "that preserves condition values while scrambling their locations. "
-            "The current mechanism creates environmental structure and clumping, "
-            "not demonstrated niche specialization caused by place memory."
+            "construction-off, but local construction is indistinguishable from a "
+            "placebo that preserves condition values while scrambling their "
+            "locations. The current mechanism creates environmental structure and "
+            "clumping, not demonstrated niche specialization caused by place memory."
         ),
         "limitations": [
             "Scrambling breaks cross-step place identity, not within-step sequential effects.",
+            "This is one exploratory parameter regime, not a robustness surface.",
             "This tests the repository's EVOLVE IV-inspired mechanism, not the historical implementation.",
             "Metabolite provenance and lineage establishment are not measured.",
         ],
@@ -243,7 +267,7 @@ def write_svg(path: Path, summary: dict[str, object]) -> None:
 <rect width="100%" height="100%" fill="white"/>
 <style>text{{font-family:Inter,Arial,sans-serif;fill:#171717}}.title{{font-size:22px;font-weight:700}}.sub{{font-size:13px;fill:#555}}</style>
 <text x="35" y="40" class="title">Place memory does not explain the mixing signal</text>
-<text x="35" y="65" class="sub">Opposite-role edge enrichment · 64 matched seeds</text>
+<text x="35" y="65" class="sub">Opposite-role edge enrichment · 64 matched seeds · named RNG streams</text>
 <line x1="75" y1="245" x2="555" y2="245" stroke="#999"/>
 {''.join(bars)}
 <text x="35" y="315" class="sub">Local construction beats construction-off, but not the scrambled-place placebo.</text>
@@ -260,10 +284,20 @@ def write_bundle(path: Path, rows: list[dict[str, object]], summary: dict[str, o
     path.mkdir(parents=True)
     with (path / "runs.csv").open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(
-            handle, fieldnames=list(rows[0]), lineterminator="\n"
+            handle, fieldnames=RAW_FIELDS, lineterminator="\n"
         )
         writer.writeheader()
-        writer.writerows(rows)
+        for row in rows:
+            writer.writerow(
+                {
+                    field: (
+                        format(float(row[field]), ".9g")
+                        if isinstance(row[field], float)
+                        else row[field]
+                    )
+                    for field in RAW_FIELDS
+                }
+            )
     (path / "summary.json").write_text(
         json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
@@ -289,7 +323,7 @@ def main() -> None:
     print(f"\nlocal - scrambled edge enrichment: {primary['mean_difference']:+.3f} "
           f"(95% bootstrap {primary['bootstrap_95_interval'][0]:+.3f} to "
           f"{primary['bootstrap_95_interval'][1]:+.3f})")
-    print("Conclusion: construction changes clustering, but persistent place memory is not the demonstrated cause of complementary mixing.")
+    print("Conclusion: construction changes clustering, but persistent place memory has no detectable advantage over the scrambled-place placebo.")
 
 
 if __name__ == "__main__":

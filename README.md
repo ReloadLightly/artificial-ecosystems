@@ -14,7 +14,7 @@ The experiment asks:
 
 > Does persistent, place-specific environmental memory make producers and recyclers form complementary local associations?
 
-We ran **64 matched seeds** in three treatments:
+We ran **64 matched seeds** in three treatments. Each treatment derives independent named streams for initialization, scheduling, reproduction, mortality, and condition decay from the same master seed, avoiding the legacy single-RNG coupling between mechanisms:
 
 | treatment | intervention |
 |---|---|
@@ -26,17 +26,17 @@ The primary statistic is the fraction of local producer–recycler edges minus t
 
 | treatment | edge enrichment | local edges | raw cross-type contact | late population |
 |---|---:|---:|---:|---:|
-| construction off | −0.065 | 74.4 | 0.640 | 66.2 |
-| local construction | +0.012 | 108.3 | 0.807 | 59.0 |
-| place memory scrambled | +0.027 | 62.5 | 0.762 | 57.6 |
+| construction off | −0.068 | 75.2 | 0.635 | 65.3 |
+| local construction | +0.018 | 112.6 | 0.814 | 61.9 |
+| place memory scrambled | +0.023 | 64.1 | 0.762 | 58.0 |
 
-Local construction improves edge enrichment over construction-off by **+0.077**. But it is **−0.015** below the scrambled-place placebo, with a paired-bootstrap 95% interval of **−0.029 to −0.001**.
+Local construction improves edge enrichment over construction-off by **+0.086**. Relative to the scrambled-place placebo, however, the difference is only **−0.005**, with a paired-bootstrap 95% interval of **−0.021 to +0.011**.
 
 ### What this teaches us
 
-Construction makes the ecosystem look more cooperative under the old contact metric, but it also produces far more local edges: it creates **clumping**. Destroying the place identity of environmental traces does not destroy the composition-adjusted mixing signal.
+Construction makes the ecosystem look more cooperative under the old contact metric, but it also produces far more local edges: it creates **clumping**. Destroying the cross-step place identity of environmental traces leaves the composition-adjusted mixing signal statistically indistinguishable.
 
-The current mechanism therefore produces **environmental heterogeneity and spatial structure**, not demonstrated niche specialization caused by persistent local memory. That negative result is progress. The next mechanism must make *where* a trace is located causally useful, rather than merely making more traces and denser clusters.
+The current mechanism therefore produces **environmental heterogeneity and spatial structure**, but provides no detectable evidence that persistent local memory causes niche specialization. That negative result is progress. The next mechanism must make *where* a trace is located causally useful, rather than merely making more traces and denser clusters.
 
 Reproduce the complete result:
 
