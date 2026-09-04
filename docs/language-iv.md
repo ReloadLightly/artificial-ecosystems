@@ -12,7 +12,7 @@ The design separates three roles that should remain separate in a future experim
 2. a deterministic interpreter executes the program;
 3. the ecosystem—not a model judge—selects through survival and reproduction.
 
-That separation is the useful idea. The former collection, qualification, cached-response, and matched-variation scaffolding was removed from `main` because it had not produced an authentic model comparison. It remains in Git history at commit `82938ca`.
+That separation is the useful idea. The former collection, qualification, cached-response, and matched-variation scaffolding was removed from `main` because it had not produced an authentic model comparison. It remains in Git history at commit `82938ca`. A much smaller replacement has now completed one fixed-proposal comparison and published its cache and results.
 
 ## Current pieces
 
@@ -22,6 +22,9 @@ That separation is the useful idea. The former collection, qualification, cached
 | `src/evolve_modern/simulation.py` | policy-carrying organisms on the conserved-chip world |
 | `src/evolve_modern/iv_policies.py` | typed EVOLVE IV program schema and validation |
 | `src/evolve_modern/iv.py` | controller boundary between programs and metabolic physics |
+| `experiments/run_semantic_variation.py` | frozen-proposal offline founder assay |
+| `experiments/cache/semantic-variation-v1.jsonl` | 24 attested agent-surface responses |
+| `results/semantic-variation-v1/` | complete rows, summary, figure, and checksums |
 
 Run the toy text-policy world:
 
@@ -35,8 +38,10 @@ Run the typed-controller integration:
 PYTHONPATH=src python3 experiments/run_language_iv.py
 ```
 
-## The next legitimate model study
+## The completed first model study
 
-Use one frozen batch of at most 24 coherent program-level proposals. Compare them with cost-matched typed and random proposals under identical ecological seeds. Evaluate only ecological consequences: descendant establishment, persistence, recovery after a shock, and behavioral novelty.
+The first study uses 24 frozen program-level proposals and compares them with same-mask typed and random proposals plus exact-parent inheritance. Ecology alone determines rare-lineage establishment and an absolute, unnormalized famine-response endpoint. The model sees the parent program and requested change fields, but no fitness score or ecological observations in the explicit task message.
 
-No live model calls should occur inside the simulation, and no new collection framework should be built unless this minimal study reveals a concrete failure that requires one.
+No live model call occurs inside the simulation. The cache contains 24/24 strict-valid final answers and the offline replay produces all 768 case–seed–arm rows. In this fixed bank, the model-assigned arm showed no observed establishment advantage over either baseline; the wide intervals are not evidence of equivalence. See the [README](../README.md#current-result-no-observed-semantic-proposal-establishment-advantage-in-the-first-fixed-bank) for the result, limitations, and exact replay command.
+
+The next step is replication across proposal samples and held-out worlds, with a normalized recovery endpoint. It is not a larger collection framework or a claim that this agent-surface comparison is genetic programming.

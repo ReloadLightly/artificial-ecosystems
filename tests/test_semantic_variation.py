@@ -10,10 +10,14 @@ import tempfile
 import unittest
 from unittest import mock
 
+ROOT = Path(__file__).resolve().parents[1]
+SRC = str(ROOT / "src")
+if SRC not in sys.path:
+    sys.path.insert(0, SRC)
+
 from evolve4.simulation import Bug
 
 
-ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location(
     "run_semantic_variation",
     ROOT / "experiments" / "run_semantic_variation.py",

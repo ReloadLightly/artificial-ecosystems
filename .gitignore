@@ -9,3 +9,4 @@ venv/
 artifacts/
 *.png
 *.csv
+!results/semantic-variation-v1/runs.csv
